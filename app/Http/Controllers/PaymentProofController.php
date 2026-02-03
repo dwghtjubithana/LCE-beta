@@ -86,15 +86,15 @@ class PaymentProofController extends Controller
             ], 404);
         }
 
-        $path = storage_path('app/' . $proof->file_path);
-        if (!is_file($path)) {
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+        if (!$disk->exists($proof->file_path)) {
             return response()->json([
                 'code' => 'NOT_FOUND',
                 'message' => 'Payment proof not found.',
             ], 404);
         }
 
-        return response()->file($path);
+        return response()->file($disk->path($proof->file_path));
     }
 
     private function resolveCompany(User $user, ?int $companyId): ?Company

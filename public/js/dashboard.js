@@ -147,6 +147,7 @@ async function initializeSession() {
     fetchDocuments();
     fetchNotifications();
     fetchPaymentProofPreview();
+    fetchPaymentProofStatus();
   } catch (err) {
     console.error(err);
     handleLogout(); // Bij twijfel: uitloggen
@@ -1012,7 +1013,11 @@ async function fetchPaymentProofPreview(force = false) {
     const fileRes = await fetch(`${API_BASE}/payment-proofs/latest/file${force ? `?ts=${Date.now()}` : ''}`, {
       headers: { 'Authorization': `Bearer ${authToken}` },
     });
-    if (!fileRes.ok) return;
+    if (!fileRes.ok) {
+      link.classList.add('hidden');
+      preview.classList.add('hidden');
+      return;
+    }
     const blob = await fileRes.blob();
     const url = URL.createObjectURL(blob);
     if (blob.type.startsWith('image/')) {
@@ -1024,6 +1029,24 @@ async function fetchPaymentProofPreview(force = false) {
       link.textContent = 'Open betaalbewijs';
       link.classList.remove('hidden');
       preview.classList.add('hidden');
+    }
+  } catch (err) {
+    // best-effort
+  }
+}
+
+async function fetchPaymentProofStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/payment-proofs/latest`, {
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data?.payment_proof) return;
+    if (data.payment_proof.status === 'PENDING') {
+      updatePlanBadges({ plan: currentUser?.plan || 'FREE', plan_status: 'PENDING_PAYMENT' });
+      const statusEl = document.getElementById('paymentStatus');
+      if (statusEl) statusEl.textContent = 'Betaalbewijs ontvangen. Status: Pending Payment.';
     }
   } catch (err) {
     // best-effort

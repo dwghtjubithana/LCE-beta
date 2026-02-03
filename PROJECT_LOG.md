@@ -3,6 +3,7 @@
 Chronological record of changes. Append newest entries at the top.
 
 ## Unreleased
+- 2026-02-03 — Fix — Payment proof file streaming now uses local disk; pending status persists in UI.
 - 2026-02-03 — UX — Added payment proof preview for users (image or link).
 - 2026-02-03 — Fix — Profile photo preview now uses auth fetch; geocode falls back to client-side.
 - 2026-02-03 — Fix — Resolved slug-check route conflict and added profile photo preview/serve endpoints.
