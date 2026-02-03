@@ -1,0 +1,7 @@
+{
+    "name": "wapcomtek/lce-pdf",
+    "description": "LCE PDF rendering",
+    "require": {
+        "dompdf/dompdf": "^3.1"
+    }
+}

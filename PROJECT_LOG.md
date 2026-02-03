@@ -1,0 +1,77 @@
+# Project Log
+
+Chronological record of changes. Append newest entries at the top.
+
+## Unreleased
+- 2026-01-26 — Phase 7 — Added admin Gemini health check endpoint + admin UI button.
+- 2026-01-26 — Phase 0/1 — Added production DB patch SQL and local-only production env file.
+- 2026-01-26 — Phase 8 — Fixed expiry date parsing and admin bulk notification test.
+- 2026-01-26 — Phase 7/8 — Added request context logging, admin pagination/health/metrics, and deployment checklist.
+- 2026-01-26 — Phase 0/3 — Removed password_reset_tokens from users migration and clarified PROCESSING as PENDING.
+- 2026-01-26 — Phase 8 — Ran migrations and full test suite (27 passed).
+- 2026-01-26 — Phase 3/5 — Added bulk upload endpoint, status/score colors, and expiry_date column; dropped password_reset_tokens.
+- 2026-01-26 — Phase 8 — Updated ROADMAP backlog with Sprint 1 nice-to-have items.
+- 2026-01-26 — Phase 7 — Added CSV export buttons for admin list views.
+- 2026-01-26 — Phase 8 — Added audit logging for auth events and admin read endpoints.
+- 2026-01-26 — Phase 7 — Fixed admin tender create default project + ran full test suite (26 passed).
+- 2026-01-26 — Phase 8 — Enforced admin access by default in production and added admin endpoint tests.
+- 2026-01-26 — Phase 7 — Added admin notification management (list/resend/mark sent) with audit logs.
+- 2026-01-26 — Phase 7 — Added admin tender management (CRUD) with audit logs + admin UI.
+- 2026-01-26 — Phase 7 — Added admin user management (list + update role/plan/status) with audit logs.
+- 2026-01-26 — Phase 6 — Added admin CRUD for compliance rules (API + UI) with audit logs.
+- 2026-01-26 — Phase 8 — Updated OpenAPI for audit logs endpoint/schema.
+- 2026-01-26 — Backlog — Added notification sender service + command integration + tests.
+- 2026-01-26 — Backlog — Wired tender import to local JSON sources + audit log entry.
+- 2026-01-26 — Phase 7 — Added audit log API + admin UI list and logging for key actions.
+- 2026-01-26 — Phase 7 — Added tender list pagination controls in admin UI.
+- 2026-01-26 — Phase 7 — Added tender list filter + limit rendering in admin UI.
+- 2026-01-26 — Backlog — Added tender import job and notification sender scaffold.
+- 2026-01-26 — Phase 8 — Updated ROADMAP: core complete; backlog next.
+- 2026-01-26 — Phase 7 — Added admin-enforcement API test (toggle-based).
+- 2026-01-26 — Phase 6 — Expanded compliance rules and expiry validations + tests.
+- 2026-01-26 — Phase 4 — Added OCR confidence parsing from Tesseract TSV output.
+- 2026-01-26 — Phase 8 — Updated ROADMAP with status and remaining TODOs.
+- 2026-01-26 — Phase 8 — Fixed OCR job file path usage and stabilized admin-enforcement tests.
+- 2026-01-26 — Phase 4 — Added Gemini validation flow for non-KKF documents using compliance rules.
+- 2026-01-26 — Phase 4 — Added optional server-side OCR via Tesseract integration.
+- 2026-01-26 — Phase 7 — Added admin-role guard for tender endpoints; updated tests.
+- 2026-01-26 — Phase 7 — Added admin role indicator check after login.
+- 2026-01-26 — Phase 7 — Added admin spinners and button disabling during requests.
+- 2026-01-26 — Phase 7 — Added admin loading states for actions.
+- 2026-01-26 — Phase 7 — Improved admin UI with inline status/error feedback.
+- 2026-01-26 — Phase 8 — Added profile PDF + classifier mismatch tests; fixed /admin route for tests.
+- 2026-01-26 — Phase 2/4 — Added company profile PDF endpoint and classifier OCR stub.
+- 2026-01-26 — Phase 7 — Added basic auth guard for /admin (env-configured).
+- 2026-01-26 — Phase 7 — Expanded admin UI with document upload/reprocess/summary actions.
+- 2026-01-26 — Phase 7 — Added admin UI (Blade) for login, company lookup, and tenders.
+- 2026-01-26 — Phase 7 — Added tender gating tests.
+- 2026-01-26 — Phase 7 — Added tender seed data and aligned model/seed with legacy tenders schema.
+- 2026-01-26 — Phase 7 — Added tender radar scaffolding (model, endpoints, gating) and migrated schema.
+- 2026-01-26 — Phase 7 — Added expiry watchdog command + schedule + tests.
+- 2026-01-26 — Phase 8 — Documented error envelope responses in OpenAPI.
+- 2026-01-26 — Phase 8 — Standardized API error envelope via global exception renderer.
+- 2026-01-26 — Phase 8 — Improved issue date parsing formats and added unit test.
+- 2026-01-26 — Phase 8 — Added expiry age handling in rule engine + unit tests.
+- 2026-01-26 — Phase 8 — Added money‑shot end‑to‑end feature test.
+- 2026-01-26 — Phase 8 — Added decision thresholds for rule engine + dashboard contract test.
+- 2026-01-26 — Phase 8 — Added contract test for document UI status mapping.
+- 2026-01-26 — Phase 8 — Added document reprocess endpoint.
+- 2026-01-26 — Phase 8 — Added summary PDF download endpoint.
+- 2026-01-26 — Phase 8 — Added feature tests for auth, company, and document flows.
+- 2026-01-26 — Phase 7 — Added document list endpoints and UI status mapping fields.
+- 2026-01-26 — Phase 7 — Added PDF summary generation via Dompdf and stored summary paths on documents.
+- 2026-01-26 — Phase 7 — Added Gemini AI integration with instruction loader and processing hook.
+- 2026-01-26 — Phase 6 — Wired rule engine into document processing job for status/feedback updates.
+- 2026-01-26 — Phase 6 — Seeded compliance rules and added basic rule evaluation service.
+- 2026-01-26 — Phase 6 — Added migration for user plan fields and applied it to local DB.
+- 2026-01-26 — Phase 6 — Added compliance rules seeder and feature gating scaffolding (plan fields + flag).
+- 2026-01-26 — Phase 5 — Added dashboard score endpoint + scoring service (4 required docs).
+- 2026-01-26 — Phase 4 — Added document processing stub job (queue dispatch + placeholder AI status update).
+- 2026-01-26 — Phase 3 — Added document upload endpoint with quarantine/secure storage flow and hash duplicate checks.
+- 2026-01-26 — Phase 1 — Added OpenAPI entries for auth and company endpoints.
+- 2026-01-26 — Phase 1 — Updated local `.env` DB settings and ran migrations against lce-db.
+- 2026-01-26 — Phase 1 — Added company endpoints (create/update/show/me) with validation and owner-only access.
+- 2026-01-26 — Phase 0 — Added JWT auth flow (controller, middleware, requests, routes) and JWT env placeholders.
+- 2026-01-26 — Phase 0 — Added Sprint 1 migrations/models (companies, documents, compliance_rules, notifications).
+- 2026-01-26 — Phase 0 — Added Laravel migrations for existing DB tables; updated users migration/model for auth fields.
+- 2026-01-26 — Phase 0 — Initialized Laravel app; moved legacy PHP implementation to `_legacy/`; added `openapi.yaml` stub; updated start docs and roadmap.

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Content Engine</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="lce-style.css">
+    <!-- Tesseract.js for Client-Side OCR -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR (Flat Light) -->
+    <aside id="sidebar" class="w-72 bg-white border-r border-slate-200 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 flex flex-col z-30 transition-transform duration-300 ease-in-out">
+        <div class="h-16 flex items-center px-6 border-b border-slate-100 mb-4">
+            <div class="w-8 h-8 bg-slate-900 rounded flex items-center justify-center text-teal-500 mr-3">
+                <i class="fa-solid fa-file-signature text-sm"></i>
+            </div>
+            <div>
+                <h1 class="font-black text-slate-800 tracking-tight leading-none">LCE</h1>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Compliance Module</span>
+            </div>
+            <button onclick="toggleSidebar()" class="ml-auto md:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+        
+        <nav class="flex-1 space-y-1 overflow-y-auto custom-scrollbar px-2">
+            <div class="px-4 py-2 text-[10px] font-black text-slate-300 uppercase tracking-widest">Main Menu</div>
+            
+            <div onclick="router('dashboard')" id="nav-dashboard" class="nav-item active">
+                <i class="fa-solid fa-chart-pie"></i> Dashboard
+            </div>
+            <div onclick="router('compliance')" id="nav-compliance" class="nav-item">
+                <i class="fa-solid fa-shield-halved"></i> Compliance Engine
+            </div>
+            <div onclick="router('contracts')" id="nav-contracts" class="nav-item">
+                <i class="fa-solid fa-file-contract"></i> Contracts & Tenders
+            </div>
+            <div onclick="router('suppliers')" id="nav-suppliers" class="nav-item">
+                <i class="fa-solid fa-network-wired"></i> Suppliers Network
+            </div>
+            <div onclick="router('scan-history')" id="nav-scan-history" class="nav-item">
+                <i class="fa-solid fa-clock-rotate-left"></i> Scan History
+            </div>
+
+            <div class="px-4 py-2 mt-6 text-[10px] font-black text-slate-300 uppercase tracking-widest">System</div>
+            <div onclick="router('settings')" id="nav-settings" class="nav-item">
+                <i class="fa-solid fa-cog"></i> Configuration
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-slate-100 bg-slate-50/50">
+            <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>
+                <div class="text-xs font-semibold text-slate-500">LCE Database Connected</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN WRAPPER -->
+    <div class="flex-1 flex flex-col relative overflow-hidden bg-[#f8fafc]">
+        
+        <!-- HEADER (Simple Flat) -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
+            <div id="btn-mobile-menu" class="md:hidden cursor-pointer"><i class="fa-solid fa-bars text-slate-500 text-xl"></i></div>
+            
+            <div id="header-breadcrumb" class="hidden md:flex items-center text-slate-400 text-xs font-medium">
+                <span class="text-slate-300 mr-2">/</span> Application <span class="text-slate-300 mx-2">/</span> <span class="text-slate-600 font-bold">Dashboard</span>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <!-- Status Badge -->
+                <div id="header-status" class="hidden md:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+                    <span class="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Guest Status</span>
+                </div>
+
+                <!-- Account Menu -->
+                <div class="relative">
+                    <button onclick="toggleProfileMenu()" class="flex items-center gap-3 hover:bg-slate-50 p-1.5 rounded-lg transition-colors border border-transparent hover:border-slate-100">
+                        <div class="text-right hidden sm:block">
+                            <div id="user-company-name" class="text-xs font-bold text-slate-700">Guest User</div>
+                            <div class="text-[10px] text-slate-400 font-medium">LCE Viewer</div>
+                        </div>
+                        <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 border border-slate-200">
+                            <i class="fa-solid fa-user text-xs"></i>
+                        </div>
+                    </button>
+                    
+                    <!-- Dropdown Content -->
+                    <div id="profile-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-50 transform origin-top-right transition-all">
+                        <div class="px-4 py-3 border-b border-slate-50 bg-slate-50/50">
+                            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Account</p>
+                            <p class="text-sm font-bold text-slate-800 truncate">Guest User</p>
+                        </div>
+                        <div class="p-1">
+                            <a href="#" id="link-profile" class="flex items-center px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-[#0ea5a4] rounded-md transition-colors"><i class="fa-solid fa-id-card mr-3 text-slate-400"></i> Profile</a>
+                            <a href="#" id="link-security" class="flex items-center px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-[#0ea5a4] rounded-md transition-colors"><i class="fa-solid fa-shield-halved mr-3 text-slate-400"></i> Security</a>
+                        </div>
+                        <div class="border-t border-slate-50 p-1 mt-1">
+                            <a href="#" id="link-logout" class="flex items-center px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-md transition-colors"><i class="fa-solid fa-power-off mr-3"></i> Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- DYNAMIC CONTENT AREA -->
+        <main id="app-content" class="flex-1 overflow-y-auto p-0 relative custom-scrollbar">
+            <!-- Content loaded via JS -->
+        </main>
+
+    </div>
+
+    <!-- TEMPLATES (Views) -->
+
+    <!-- VIEW: DASHBOARD (Simple & Clean) -->
+    <template id="view-dashboard">
+        <div class="p-8 max-w-7xl mx-auto space-y-8 fade-in">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">LCE Overview</h2>
+                    <p class="text-slate-400 text-sm mt-1">Real-time compliance & tender monitoring</p>
+                </div>
+                <div class="flex gap-2">
+                     <button onclick="router('contracts')" class="bg-white border border-slate-200 text-slate-600 hover:text-[#0ea5a4] hover:border-[#0ea5a4] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all">
+                        <i class="fa-solid fa-list mr-2"></i> View All
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <!-- Action Card (Completely Flat) -->
+                <div class="glass-card p-6 rounded-2xl col-span-1 md:col-span-2 cursor-pointer" onclick="router('compliance')">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="w-10 h-10 bg-[#0ea5a4]/10 text-[#0ea5a4] rounded-lg flex items-center justify-center"><i class="fa-solid fa-fingerprint text-lg"></i></div>
+                        <span class="bg-slate-100 text-slate-500 text-[10px] font-bold uppercase px-2 py-1 rounded">Action Required</span>
+                    </div>
+                    <h3 class="font-bold text-lg text-slate-800">Start Verification</h3>
+                    <p class="text-slate-500 text-sm mt-2 mb-4 leading-relaxed">Your company profile is not yet validated for Tier-2 tenders. Start the compliance check now.</p>
+                    <div class="text-[#0ea5a4] text-xs font-bold uppercase tracking-widest flex items-center">Start Now <i class="fa-solid fa-arrow-right ml-2"></i></div>
+                </div>
+
+                <!-- Stats Card -->
+                <div class="glass-card p-6 rounded-2xl cursor-pointer" onclick="router('contracts')">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tenders</div>
+                        <i class="fa-solid fa-file-contract text-[#0ea5a4] opacity-50"></i>
+                    </div>
+                    <div class="text-3xl font-bold text-slate-800 mb-1">0</div>
+                    <div class="text-xs font-medium text-slate-400">Available in your sector</div>
+                </div>
+
+                <!-- Messages Card -->
+                <div class="glass-card p-6 rounded-2xl cursor-pointer">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Messages</div>
+                        <i class="fa-solid fa-bell text-orange-400 opacity-50"></i>
+                    </div>
+                    <div class="text-3xl font-bold text-slate-800 mb-1">0</div>
+                    <div class="text-xs font-medium text-slate-400">New notifications</div>
+                </div>
+            </div>
+
+            <!-- Activity Section -->
+            <div class="glass-card rounded-2xl p-8">
+                <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-wave-square text-[#0ea5a4]"></i> System Activity
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-center py-12 text-slate-400 flex-col border border-dashed border-slate-200 rounded-xl bg-slate-50/30">
+                        <i class="fa-solid fa-wind text-2xl mb-3 opacity-50"></i>
+                        <span class="text-sm font-medium">No recent activity recorded on your account.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <!-- VIEW: COMPLIANCE ENGINE -->
+    <template id="view-compliance">
+        <div class="bg-white border-b border-slate-200 px-8 py-8">
+            <div class="max-w-4xl mx-auto relative flex items-center justify-between">
+                <!-- Track -->
+                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 rounded-full -z-0"></div>
+                <!-- Active Track -->
+                <div id="progress-bar" class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-[#0ea5a4] rounded-full transition-all duration-1000 ease-out z-0" style="width: 15%;"></div>
+                
+                <!-- Steps -->
+                <div class="relative z-10 flex flex-col items-center group">
+                    <div class="w-8 h-8 bg-[#0ea5a4] text-white rounded-full flex items-center justify-center font-bold ring-4 ring-white text-xs">1</div>
+                    <span class="mt-3 text-[10px] font-bold text-[#0ea5a4] uppercase tracking-widest">Identity</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-8 h-8 bg-white text-slate-300 border-2 border-slate-200 rounded-full flex items-center justify-center font-bold ring-4 ring-white text-xs">2</div>
+                    <span class="mt-3 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Docs</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-8 h-8 bg-white text-slate-300 border-2 border-slate-200 rounded-full flex items-center justify-center font-bold ring-4 ring-white text-xs">3</div>
+                    <span class="mt-3 text-[10px] font-bold text-slate-300 uppercase tracking-widest">HSEQ</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-8 h-8 bg-white text-slate-300 border-2 border-slate-200 rounded-full flex items-center justify-center font-bold ring-4 ring-white text-xs">4</div>
+                    <span class="mt-3 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Cert</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-8 pb-32 max-w-4xl mx-auto space-y-8 fade-in">
+            <!-- KKF Card -->
+            <div class="glass-card rounded-2xl overflow-hidden" id="card-a">
+                <div class="px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <h2 class="font-bold text-slate-800 flex items-center gap-3">
+                        <div class="w-8 h-8 bg-slate-100 rounded flex items-center justify-center text-slate-500"><i class="fa-solid fa-building"></i></div>
+                        Company Identification
+                    </h2>
+                </div>
+                <div class="p-8">
+                    <div class="flex gap-4 items-end mb-6">
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">KKF Dossier Number</label>
+                            <input type="text" id="kkf-input" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-1 focus:ring-[#0ea5a4] focus:border-[#0ea5a4] outline-none transition-all" placeholder="E.g. 12345">
+                        </div>
+                        <button onclick="verifyKKF()" id="btn-kkf" class="btn-primary px-8 py-3 rounded-xl text-sm font-bold">VERIFY</button>
+                    </div>
+                    <div id="kkf-result" class="hidden bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-sm text-emerald-800 flex items-center font-medium">
+                        <!-- Result injected dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- OCR / Upload Card -->
+            <div class="glass-card rounded-2xl overflow-hidden" id="card-b">
+                <div class="px-8 py-5 border-b border-slate-100 bg-slate-50/50"><h2 class="font-bold text-slate-800 flex items-center gap-3">
+                    <div class="w-8 h-8 bg-slate-100 rounded flex items-center justify-center text-slate-500"><i class="fa-solid fa-file-shield"></i></div>
+                    Document Validation
+                </h2></div>
+                <div class="p-8">
+                    <div id="dropzone" class="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center bg-slate-50/30 hover:bg-white hover:border-[#0ea5a4] transition-all cursor-pointer relative scan-container group">
+                        <div class="laser-line" id="laser"></div>
+                        
+                        <input type="file" id="file-upload" accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.docx" class="hidden" onchange="processOCR(this)">
+                        
+                        <div id="upload-options">
+                            <div class="flex items-center justify-center space-x-4">
+                                <div id="upload-content" class="text-center p-6 border rounded-lg hover:bg-slate-100 cursor-pointer w-1/2" onclick="document.getElementById('file-upload').click()">
+                                    <div class="w-16 h-16 bg-white border border-slate-100 shadow-sm rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform">
+                                        <i class="fa-solid fa-cloud-arrow-up text-2xl text-[#0ea5a4]"></i>
+                                    </div>
+                                    <p class="font-bold text-slate-700">Upload File</p>
+                                    <p class="text-xs text-slate-400 mt-2 font-medium">Select an image, PDF, or DOCX</p>
+                                </div>
+                                <div id="camera-option" class="text-center p-6 border rounded-lg hover:bg-slate-100 cursor-pointer w-1/2" onclick="startCameraScan()">
+                                    <div class="w-16 h-16 bg-white border border-slate-100 shadow-sm rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform">
+                                        <i class="fa-solid fa-camera text-2xl text-[#0ea5a4]"></i>
+                                    </div>
+                                    <p class="font-bold text-slate-700">Use Camera</p>
+                                    <p class="text-xs text-slate-400 mt-2 font-medium">Scan document with your camera</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="camera-view" class="hidden">
+                            <video id="video" class="w-full rounded-lg" autoplay playsinline></video>
+                            <canvas id="canvas" class="hidden"></canvas>
+                            <div class="text-center mt-4">
+                                <button onclick="captureAndProcess()" class="btn-primary px-8 py-3 rounded-xl text-sm font-bold">CAPTURE</button>
+                                <button onclick="stopCameraScan()" class="bg-gray-200 text-gray-700 px-4 py-3 rounded-xl text-sm font-bold ml-2">CANCEL</button>
+                            </div>
+                        </div>
+
+                        <div id="ocr-status" class="hidden">
+                            <p id="ocr-text" class="text-[#0ea5a4] font-bold animate-pulse mb-3 text-sm">Starting AI Engine...</p>
+                            <div class="w-full bg-slate-200 rounded-full h-1.5 mb-4 max-w-xs mx-auto overflow-hidden">
+                                <div id="ocr-progress" class="bg-[#0ea5a4] h-1.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div id="ocr-result" class="hidden text-left bg-slate-800 p-4 rounded-xl border border-slate-700 text-[10px] font-mono text-green-400 h-32 overflow-y-auto shadow-inner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Magic Button -->
+            <div class="text-right">
+                <button id="magic-btn" onclick="upgradeToTier2()" disabled class="btn-disabled px-8 py-4 rounded-xl font-bold text-sm tracking-widest uppercase transition-all">
+                    Generate Certificate
+                </button>
+            </div>
+
+            <!-- Results Panel -->
+            <div id="result-panel" class="glass-card rounded-2xl overflow-hidden hidden">
+                <div class="px-8 py-5 border-b border-slate-100 bg-slate-50/50">
+                    <h2 class="font-bold text-slate-800 flex items-center gap-3">
+                        <div class="w-8 h-8 bg-slate-100 rounded flex items-center justify-center text-slate-500"><i class="fa-solid fa-clipboard-check"></i></div>
+                        Certificate & Summary
+                    </h2>
+                </div>
+                <div class="p-8 space-y-4">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Certificate Status</div>
+                            <div id="certificate-status" class="text-lg font-bold text-emerald-600">Pending</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="openCertificatePreview()" class="bg-white border border-slate-200 text-slate-600 hover:text-[#0ea5a4] hover:border-[#0ea5a4] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all">
+                                View Certificate
+                            </button>
+                            <a id="summary-download" href="#" class="bg-[#0ea5a4] text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all" download>
+                                Download Summary
+                            </a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">AI Summary</div>
+                        <div id="summary-output" class="bg-slate-900 text-emerald-300 text-xs font-mono rounded-xl p-4 h-40 overflow-y-auto border border-slate-800"></div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Recent Scans</div>
+                        <div id="scan-history-panel" class="bg-white border border-slate-100 rounded-xl p-4 text-xs text-slate-600">
+                            <div class="text-slate-400">No scans loaded yet.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- VIEW: CONTRACTS (Simple) -->
+    <template id="view-contracts">
+        <div class="p-8 max-w-7xl mx-auto space-y-6 fade-in">
+            <div class="flex justify-between items-end mb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Contracts & Tenders</h2>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Live Database Feed</p>
+                </div>
+                <button onclick="renderContracts()" class="bg-white border border-slate-200 text-slate-600 hover:text-[#0ea5a4] p-2 rounded-lg transition-colors">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-5 rounded-xl flex items-center justify-between">
+                    <div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Open</div><div class="text-2xl font-bold text-slate-800 mt-1">0</div></div>
+                    <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center"><i class="fa-solid fa-folder-open"></i></div>
+                </div>
+                <div class="glass-card p-5 rounded-xl flex items-center justify-between">
+                    <div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pending</div><div class="text-2xl font-bold text-slate-800 mt-1">0</div></div>
+                    <div class="w-10 h-10 bg-orange-50 text-orange-500 rounded-lg flex items-center justify-center"><i class="fa-solid fa-clock"></i></div>
+                </div>
+                <div class="glass-card p-5 rounded-xl flex items-center justify-between">
+                    <div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Value (YTD)</div><div class="text-2xl font-bold text-slate-800 mt-1">$ 0</div></div>
+                    <div class="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-lg flex items-center justify-center"><i class="fa-solid fa-chart-line"></i></div>
+                </div>
+            </div>
+            
+            <div id="contracts-container" class="glass-card rounded-2xl overflow-hidden min-h-[300px]">
+                <!-- Content generated dynamically -->
+            </div>
+        </div>
+    </template>
+
+    <!-- VIEW: SUPPLIERS (Simple) -->
+    <template id="view-suppliers">
+        <div class="p-8 max-w-7xl mx-auto space-y-6 fade-in">
+            <div class="flex justify-between items-end mb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Suppliers Network</h2>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Approved Vendor List</p>
+                </div>
+                <button onclick="renderSuppliers()" class="bg-white border border-slate-200 text-slate-600 hover:text-[#0ea5a4] p-2 rounded-lg transition-colors">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-5 rounded-xl flex items-center justify-between">
+                    <div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Total Vendors</div><div class="text-2xl font-bold text-slate-800 mt-1">0</div></div>
+                    <div class="w-10 h-10 bg-indigo-50 text-indigo-500 rounded-lg flex items-center justify-center"><i class="fa-solid fa-users"></i></div>
+                </div>
+                <div class="glass-card p-5 rounded-xl flex items-center justify-between">
+                    <div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">LCE Certified</div><div class="text-2xl font-bold text-slate-800 mt-1">0</div></div>
+                    <div class="w-10 h-10 bg-teal-50 text-teal-500 rounded-lg flex items-center justify-center"><i class="fa-solid fa-certificate"></i></div>
+                </div>
+                <div class="glass-card p-5 rounded-xl flex items-center justify-between">
+                    <div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Watchlist</div><div class="text-2xl font-bold text-slate-800 mt-1">0</div></div>
+                    <div class="w-10 h-10 bg-pink-50 text-pink-500 rounded-lg flex items-center justify-center"><i class="fa-solid fa-eye"></i></div>
+                </div>
+            </div>
+            
+            <div id="suppliers-container" class="glass-card rounded-2xl overflow-hidden min-h-[300px]">
+                <!-- Content generated dynamically -->
+            </div>
+        </div>
+    </template>
+
+    <!-- VIEW: SCAN HISTORY -->
+    <template id="view-scan-history">
+        <div class="p-8 max-w-6xl mx-auto space-y-6 fade-in">
+            <div class="flex justify-between items-end mb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Scan History</h2>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">All recent scans</p>
+                </div>
+                <button onclick="loadScanHistory()" class="bg-white border border-slate-200 text-slate-600 hover:text-[#0ea5a4] p-2 rounded-lg transition-colors">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+            </div>
+
+            <div class="glass-card rounded-2xl overflow-hidden">
+                <div id="scan-history" class="p-6 text-xs text-slate-600">
+                    <div class="text-slate-400">Loading scans...</div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- VIEW: CONFIGURATION (New) -->
+    <template id="view-settings">
+        <div class="p-8 max-w-4xl mx-auto space-y-6 fade-in">
+            <div class="flex justify-between items-end border-b border-slate-200 pb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">System Configuration</h2>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">General Settings & Preferences</p>
+                </div>
+                <button id="btn-save-settings" class="btn-primary px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider">Save Changes</button>
+            </div>
+
+            <div class="glass-card rounded-xl overflow-hidden">
+                <!-- Settings Tabs -->
+                <div id="settings-tabs" class="flex border-b border-slate-100 bg-slate-50/50">
+                    <button id="tab-general" class="px-6 py-3 text-sm font-bold text-slate-800 border-b-2 border-[#0ea5a4]">General</button>
+                    <button id="tab-notifications" class="px-6 py-3 text-sm font-semibold text-slate-500 hover:text-slate-700">Notifications</button>
+                    <button id="tab-security" class="px-6 py-3 text-sm font-semibold text-slate-500 hover:text-slate-700">Security</button>
+                </div>
+
+                <div id="content-general" class="p-8 space-y-8">
+                    <!-- Section 1 -->
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-widest mb-4">Application Preferences</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-4 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700">Dark Mode</p>
+                                    <p class="text-xs text-slate-400">Switch between light and dark theme</p>
+                                </div>
+                                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                    <input type="checkbox" name="toggle" id="toggle-dark" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-slate-300"/>
+                                    <label for="toggle-dark" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer"></label>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between p-4 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700">Compact View</p>
+                                    <p class="text-xs text-slate-400">Reduce padding in tables and lists</p>
+                                </div>
+                                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                    <input type="checkbox" name="toggle" id="toggle-compact" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-slate-300"/>
+                                    <label for="toggle-compact" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer"></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2 -->
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-widest mb-4">Data Management</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="p-4 border border-slate-100 rounded-lg">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Default Currency</label>
+                                <select id="select-currency" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0ea5a4]">
+                                    <option>USD ($)</option>
+                                    <option>EUR (€)</option>
+                                    <option selected>SRD ($)</option>
+                                </select>
+                            </div>
+                            <div class="p-4 border border-slate-100 rounded-lg">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Refresh Interval</label>
+                                <select id="select-refresh-interval" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0ea5a4]">
+                                    <option>Manual Only</option>
+                                    <option>Every 5 Minutes</option>
+                                    <option>Every 15 Minutes</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="content-notifications" class="p-8 hidden">
+                    <p class="text-center text-slate-400 font-medium">Notifications settings are not yet available.</p>
+                </div>
+                <div id="content-security" class="p-8 hidden">
+                    <p class="text-center text-slate-400 font-medium">Security settings are not yet available.</p>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- SPA LOGIC -->
+    <script src="lce-app.js" defer></script>
+
+    <!-- Toasts -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3"></div>
+</body>
+</html>

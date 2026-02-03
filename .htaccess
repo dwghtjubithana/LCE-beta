@@ -1,0 +1,14 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /Wapcore/LCE-beta/
+
+    # Block direct access to sensitive files
+    RewriteRule ^(\.env|composer\.json|composer\.lock|artisan|storage|vendor) - [F,L]
+
+    # Route all requests through Laravel's front controller
+    RewriteCond %{REQUEST_URI} !^/Wapcore/LCE-beta/public/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ public/index.php [L]
+</IfModule>
+
