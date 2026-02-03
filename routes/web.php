@@ -3,7 +3,27 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('dashboard');
+    return view('user.dashboard', ['active' => 'dashboard']);
+});
+
+Route::get('/dashboard', function () {
+    return view('user.dashboard', ['active' => 'dashboard']);
+});
+
+Route::get('/documents', function () {
+    return view('user.documents', ['active' => 'documents']);
+});
+
+Route::get('/profile', function () {
+    return view('user.profile', ['active' => 'profile']);
+});
+
+Route::get('/digital-id', function () {
+    return view('user.digital-id', ['active' => 'digital-id']);
+});
+
+Route::get('/upgrade', function () {
+    return view('user.upgrade', ['active' => 'upgrade']);
 });
 
 Route::get('/tenders', function () {

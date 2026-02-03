@@ -36,6 +36,7 @@ Route::get('public/tenders/{id}', [TenderController::class, 'showPublic']);
 
 Route::middleware('jwt')->group(function () {
     // User-facing routes
+    Route::post('companies', [CompanyController::class, 'store']);
     Route::get('companies/me', [CompanyController::class, 'me']);
     Route::get('companies/me/dashboard', [CompanyController::class, 'dashboardMe']);
     Route::get('companies/me/profile.pdf', [CompanyController::class, 'profilePdfMe']);
@@ -65,7 +66,7 @@ Route::middleware('jwt')->group(function () {
 
     // Admin-only routes
     Route::middleware('admin.role')->group(function () {
-        Route::post('companies', [CompanyController::class, 'store']);
+        // (moved to user-facing routes)
 
         Route::get('admin/audit-logs', [AuditLogController::class, 'index']);
         Route::get('admin/companies', [AdminCompanyController::class, 'index']);

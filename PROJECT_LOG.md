@@ -3,6 +3,9 @@
 Chronological record of changes. Append newest entries at the top.
 
 ## Unreleased
+- 2026-02-03 — UX — Hid login modal by default to prevent flash during navigation.
+- 2026-02-03 — Fix — Allowed user company creation and improved no-company handling.
+- 2026-02-03 — UX — Split dashboard into multiple user pages and added create-company flow and guards.
 - 2026-02-03 — Routing — Synced dashboard_v2 into dashboard view and routed / to dashboard.
 - 2026-02-03 — Routing — Added dashboard_v2 view to bypass cached Blade output.
 - 2026-02-03 — Routing — Converted dashboard to Blade view and served it at /.

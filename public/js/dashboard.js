@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Strikte auth check
   if (authToken) {
+    hideLoginModal();
     initializeSession();
   } else {
     showLoginModal();
@@ -76,6 +77,13 @@ function showLoginModal() {
   document.getElementById('loginModal').classList.add('modal-active');
 }
 
+function hideLoginModal() {
+  const modal = document.getElementById('loginModal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('modal-active');
+}
+
 // --- AUTHENTICATIE ---
 
 async function initializeSession() {
@@ -113,6 +121,14 @@ async function initializeSession() {
       headers: { 'Authorization': `Bearer ${authToken}` }
     });
     if (!companyRes.ok) {
+      if (companyRes.status === 404) {
+        showCreateCompanyForm();
+        if (window.location.pathname !== '/profile') {
+          showToast('LET OP: Geen company gevonden voor deze gebruiker.', 'error');
+          window.location.href = '/profile';
+        }
+        return;
+      }
       showToast('LET OP: Geen company gevonden voor deze gebruiker.', 'error');
       return;
     }
@@ -125,6 +141,7 @@ async function initializeSession() {
     currentCompany = company;
     populateCompanyForm(company);
     populateDigitalIdForm(company);
+    hideCreateCompanyForm();
 
     fetchDashboard();
     fetchDocuments();
@@ -135,7 +152,9 @@ async function initializeSession() {
   }
 }
 
-document.getElementById('companyProfileForm').addEventListener('submit', async (e) => {
+const companyProfileForm = document.getElementById('companyProfileForm');
+if (companyProfileForm) {
+companyProfileForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const statusEl = document.getElementById('profileStatus');
   const btn = document.getElementById('saveProfileBtn');
@@ -154,6 +173,11 @@ document.getElementById('companyProfileForm').addEventListener('submit', async (
   statusEl.textContent = 'Opslaan...';
 
   try {
+    if (!currentCompany?.id) {
+      showCreateCompanyForm();
+      if (statusEl) statusEl.textContent = 'Maak eerst een bedrijf aan.';
+      return;
+    }
     if (!currentCompany?.id) throw new Error('Geen company beschikbaar');
     const res = await fetch(`${API_BASE}/companies/${currentCompany.id}`, {
       method: 'PATCH',
@@ -178,8 +202,11 @@ document.getElementById('companyProfileForm').addEventListener('submit', async (
     btn.classList.remove('opacity-70');
   }
 });
+}
 
-document.getElementById('digitalIdForm').addEventListener('submit', async (e) => {
+const digitalIdForm = document.getElementById('digitalIdForm');
+if (digitalIdForm) {
+digitalIdForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const statusEl = document.getElementById('digitalIdStatus');
   const btn = document.getElementById('saveDigitalIdBtn');
@@ -222,8 +249,11 @@ document.getElementById('digitalIdForm').addEventListener('submit', async (e) =>
     btn.classList.remove('opacity-70');
   }
 });
+}
 
-document.getElementById('downloadProfileBtn').addEventListener('click', async () => {
+const downloadProfileBtn = document.getElementById('downloadProfileBtn');
+if (downloadProfileBtn) {
+downloadProfileBtn.addEventListener('click', async () => {
   try {
     const res = await fetch(`${API_BASE}/companies/me/profile.pdf`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
@@ -243,8 +273,11 @@ document.getElementById('downloadProfileBtn').addEventListener('click', async ()
     showToast(err.message || 'Download mislukt', 'error');
   }
 });
+}
 
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('emailInput').value;
   const password = document.getElementById('passwordInput').value;
@@ -280,6 +313,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     btn.textContent = 'Inloggen';
   }
 });
+}
 
 function handleLogout() {
   localStorage.removeItem('lce_token');
@@ -289,6 +323,7 @@ function handleLogout() {
 // --- DASHBOARD DATA ---
 
 async function fetchDashboard() {
+  if (!document.getElementById('scoreMessage')) return;
   try {
     const res = await fetch(`${API_BASE}/companies/me/dashboard`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
@@ -341,6 +376,7 @@ async function fetchDashboard() {
 }
 
 function updateGauge(score) {
+  if (!document.getElementById('gaugeProgress')) return;
   // Veiligheidscheck
   if (score === undefined || score === null) score = 0;
 
@@ -379,6 +415,7 @@ function updateGauge(score) {
 
 async function fetchDocuments() {
   const tbody = document.getElementById('documentsTableBody');
+  if (!tbody) return;
   try {
     const res = await fetch(`${API_BASE}/companies/me/documents`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
@@ -562,18 +599,27 @@ function showToast(msg, type = 'info') {
 }
 
 function populateCompanyForm(company) {
-  document.getElementById('companyNameInput').value = company.company_name || '';
-  document.getElementById('companySectorInput').value = company.sector || '';
-  document.getElementById('companyExperienceInput').value = company.experience || '';
-  document.getElementById('companyContactInput').value = company.contact?.email || '';
+  const nameEl = document.getElementById('companyNameInput');
+  const sectorEl = document.getElementById('companySectorInput');
+  const expEl = document.getElementById('companyExperienceInput');
+  const contactEl = document.getElementById('companyContactInput');
+  if (nameEl) nameEl.value = company.company_name || '';
+  if (sectorEl) sectorEl.value = company.sector || '';
+  if (expEl) expEl.value = company.experience || '';
+  if (contactEl) contactEl.value = company.contact?.email || '';
 }
 
 function populateDigitalIdForm(company) {
-  document.getElementById('publicSlugInput').value = company.public_slug || '';
-  document.getElementById('displayNameInput').value = company.display_name || '';
-  document.getElementById('addressInput').value = company.address || '';
-  document.getElementById('latInput').value = company.lat || '';
-  document.getElementById('lngInput').value = company.lng || '';
+  const slugEl = document.getElementById('publicSlugInput');
+  const displayEl = document.getElementById('displayNameInput');
+  const addressEl = document.getElementById('addressInput');
+  const latEl = document.getElementById('latInput');
+  const lngEl = document.getElementById('lngInput');
+  if (slugEl) slugEl.value = company.public_slug || '';
+  if (displayEl) displayEl.value = company.display_name || '';
+  if (addressEl) addressEl.value = company.address || '';
+  if (latEl) latEl.value = company.lat || '';
+  if (lngEl) lngEl.value = company.lng || '';
 
   const link = document.getElementById('publicProfileLink');
   if (link) {
@@ -581,6 +627,57 @@ function populateDigitalIdForm(company) {
     link.href = slug ? `/p/${slug}` : '#';
     link.textContent = slug ? `Bekijk publieke link: /p/${slug}` : 'Stel je slug in om de link te zien';
   }
+}
+
+const companyCreateForm = document.getElementById('companyCreateForm');
+if (companyCreateForm) {
+  companyCreateForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const statusEl = document.getElementById('companyCreateStatus');
+    const payload = {
+      company_name: document.getElementById('createCompanyName').value.trim(),
+      sector: document.getElementById('createCompanySector').value.trim(),
+      experience: document.getElementById('createCompanyExperience').value.trim(),
+      contact: {
+        email: document.getElementById('createCompanyContact').value.trim(),
+      },
+    };
+    try {
+    const res = await fetch(`${API_BASE}/companies`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Aanmaken mislukt');
+      currentCompany = data.company;
+      hideCreateCompanyForm();
+      populateCompanyForm(currentCompany);
+      showToast('Bedrijf aangemaakt', 'success');
+      fetchDashboard();
+      fetchDocuments();
+    } catch (err) {
+      if (statusEl) statusEl.textContent = err.message || 'Aanmaken mislukt.';
+      showToast(err.message || 'Aanmaken mislukt', 'error');
+    }
+  });
+}
+
+function showCreateCompanyForm() {
+  const panel = document.getElementById('companyCreatePanel');
+  const profilePanel = document.getElementById('companyProfilePanel');
+  if (panel) panel.classList.remove('hidden');
+  if (profilePanel) profilePanel.classList.add('hidden');
+}
+
+function hideCreateCompanyForm() {
+  const panel = document.getElementById('companyCreatePanel');
+  const profilePanel = document.getElementById('companyProfilePanel');
+  if (panel) panel.classList.add('hidden');
+  if (profilePanel) profilePanel.classList.remove('hidden');
 }
 
 function bindDocumentRowToggles() {

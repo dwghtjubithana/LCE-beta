@@ -3,10 +3,10 @@
 Tracks the latest change plus the previous two changes.
 
 ## Latest change
-- Switched / back to dashboard.blade.php and synced dashboard_v2 into it.
+- Prevented login modal flash on page navigation (hide by default, show on demand).
 
 ## Previous change
-- Routed / to dashboard_v2 to bypass cached Blade output.
+- Fixed company creation permissions and reduced redundant no-company warnings.
 
 ## Prior change
-- Converted dashboard into Blade view and served it directly at /.
+- Split dashboard into separate user pages (dashboard/documents/profile/digital-id/upgrade) with create-company flow.
