@@ -3,6 +3,9 @@
     RewriteEngine On
     RewriteBase /
 
+    # Route root to Laravel front controller
+    RewriteRule ^$ public/index.php [L]
+
     # Block direct access to sensitive files
     RewriteRule ^(\.env|composer\.json|composer\.lock|artisan|storage|vendor) - [F,L]
 

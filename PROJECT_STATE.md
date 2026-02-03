@@ -3,10 +3,10 @@
 Tracks the latest change plus the previous two changes.
 
 ## Latest change
-- Converted dashboard into Blade view and served it directly at /.
+- Switched / back to dashboard.blade.php and synced dashboard_v2 into it.
 
 ## Previous change
-- Routed / to dashboard (index.html) and moved public tenders to /tenders.
+- Routed / to dashboard_v2 to bypass cached Blade output.
 
 ## Prior change
-- Fixed asset paths to load dashboard/public CSS/JS when web root is repo root.
+- Converted dashboard into Blade view and served it directly at /.

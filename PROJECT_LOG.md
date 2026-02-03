@@ -3,6 +3,8 @@
 Chronological record of changes. Append newest entries at the top.
 
 ## Unreleased
+- 2026-02-03 — Routing — Synced dashboard_v2 into dashboard view and routed / to dashboard.
+- 2026-02-03 — Routing — Added dashboard_v2 view to bypass cached Blade output.
 - 2026-02-03 — Routing — Converted dashboard to Blade view and served it at /.
 - 2026-02-03 — Routing — Redirected / to index.html and moved public tenders to /tenders.
 - 2026-02-03 — Fix — Updated asset paths to /public/* to resolve 404s for CSS/JS.
