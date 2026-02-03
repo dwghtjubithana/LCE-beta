@@ -51,17 +51,30 @@
             document.getElementById('rules-table').innerHTML = '<div class="status">No rules found.</div>';
             return;
         }
-        const body = rows.map(rule => `
+        const body = rows.map(rule => {
+            const keywords = Array.isArray(rule.required_keywords) ? rule.required_keywords.join(', ') : '-';
+            const constraints = rule.constraints || {};
+            const expiry = typeof constraints.expiry_required === 'boolean'
+                ? (constraints.expiry_required ? 'Yes' : 'No')
+                : '-';
+            const requiredFields = Array.isArray(constraints.required_fields)
+                ? constraints.required_fields.join(', ')
+                : '-';
+            return `
             <tr>
                 <td>${rule.id}</td>
                 <td>${rule.document_type || '-'}</td>
                 <td>${rule.max_age_months || '-'}</td>
+                <td>${keywords || '-'}</td>
+                <td>${expiry}</td>
+                <td>${requiredFields}</td>
                 <td class="actions">
                     <a href="/admin/compliance-rules/${rule.id}" class="btn secondary">View</a>
                     <a href="/admin/compliance-rules/${rule.id}/edit" class="btn secondary">Edit</a>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
         document.getElementById('rules-table').innerHTML = `
             <table class="table">
                 <thead>
@@ -69,6 +82,9 @@
                         <th>ID</th>
                         <th>Document Type</th>
                         <th>Max Age (months)</th>
+                        <th>Keywords</th>
+                        <th>Expiry Required</th>
+                        <th>Required Fields</th>
                         <th>Actions</th>
                     </tr>
                 </thead>

@@ -15,28 +15,49 @@
 </div>
 
 <div class="card">
-    <div class="filters">
-        <input class="input" id="edit-name" placeholder="Name" disabled>
-        <input class="input" id="edit-email" placeholder="Email" disabled>
-        <input class="input" id="edit-phone" placeholder="Phone" disabled>
-        <select id="edit-role">
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-        </select>
-        <select id="edit-status">
-            <option value="ACTIVE">Active</option>
-            <option value="SUSPENDED">Suspended</option>
-        </select>
-        <select id="edit-plan">
-            <option value="FREE">Free</option>
-            <option value="PRO">Pro</option>
-            <option value="BUSINESS">Business</option>
-        </select>
-        <select id="edit-plan-status">
-            <option value="ACTIVE">Active</option>
-            <option value="PENDING_PAYMENT">Pending payment</option>
-            <option value="EXPIRED">Expired</option>
-        </select>
+    <div class="form-stack">
+        <div class="form-field">
+            <label for="edit-name">Name</label>
+            <input class="input" id="edit-name" placeholder="Name" disabled>
+        </div>
+        <div class="form-field">
+            <label for="edit-email">Email</label>
+            <input class="input" id="edit-email" placeholder="Email" disabled>
+        </div>
+        <div class="form-field">
+            <label for="edit-phone">Phone</label>
+            <input class="input" id="edit-phone" placeholder="Phone" disabled>
+        </div>
+        <div class="form-field">
+            <label for="edit-role">Role</label>
+            <select id="edit-role">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="edit-status">Status</label>
+            <select id="edit-status">
+                <option value="ACTIVE">Active</option>
+                <option value="SUSPENDED">Suspended</option>
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="edit-plan">Plan</label>
+            <select id="edit-plan">
+                <option value="FREE">Free</option>
+                <option value="PRO">Pro</option>
+                <option value="BUSINESS">Business</option>
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="edit-plan-status">Plan status</label>
+            <select id="edit-plan-status">
+                <option value="ACTIVE">Active</option>
+                <option value="PENDING_PAYMENT">Pending payment</option>
+                <option value="EXPIRED">Expired</option>
+            </select>
+        </div>
     </div>
     <div class="actions" style="margin-top:12px;">
         <button class="btn" id="btn-save">Save changes</button>

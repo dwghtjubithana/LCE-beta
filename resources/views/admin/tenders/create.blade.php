@@ -15,14 +15,35 @@
 </div>
 
 <div class="card">
-    <div class="filters">
-        <input class="input" id="tender-title" placeholder="Title">
-        <input class="input" id="tender-project" placeholder="Project (optional)">
-        <input class="input" id="tender-date" type="date">
-        <input class="input" id="tender-client" placeholder="Client">
-        <input class="input" id="tender-url" placeholder="Details URL">
-        <input class="input" id="tender-attachments" placeholder='Attachments JSON (optional)'>
-        <input class="input" id="tender-description" placeholder="Description">
+    <div class="form-stack">
+        <div class="form-field">
+            <label for="tender-title">Title</label>
+            <input class="input" id="tender-title" placeholder="e.g. Levering Zand">
+        </div>
+        <div class="form-field">
+            <label for="tender-project">Project</label>
+            <input class="input" id="tender-project" placeholder="Optional">
+        </div>
+        <div class="form-field">
+            <label for="tender-date">Date</label>
+            <input class="input" id="tender-date" type="date">
+        </div>
+        <div class="form-field">
+            <label for="tender-client">Client</label>
+            <input class="input" id="tender-client" placeholder="e.g. Min. OW">
+        </div>
+        <div class="form-field">
+            <label for="tender-url">Details URL</label>
+            <input class="input" id="tender-url" placeholder="https://...">
+        </div>
+        <div class="form-field">
+            <label for="tender-attachments">Attachments</label>
+            <input class="input" id="tender-attachments" placeholder="Comma separated URLs (optional)">
+        </div>
+        <div class="form-field">
+            <label for="tender-description">Description</label>
+            <input class="input" id="tender-description" placeholder="Optional summary">
+        </div>
     </div>
     <div class="actions" style="margin-top:12px;">
         <button class="btn" id="btn-create">Create tender</button>
@@ -39,15 +60,9 @@
     document.getElementById('btn-create').addEventListener('click', async () => {
         const statusEl = document.getElementById('create-status');
         const attachmentsRaw = document.getElementById('tender-attachments').value.trim();
-        let attachments = null;
-        if (attachmentsRaw) {
-            try {
-                attachments = JSON.parse(attachmentsRaw);
-            } catch {
-                AdminApp.setStatus(statusEl, 'Attachments must be valid JSON.', 'error');
-                return;
-            }
-        }
+        const attachments = attachmentsRaw
+            ? attachmentsRaw.split(',').map(s => s.trim()).filter(Boolean)
+            : null;
         const payload = {
             title: document.getElementById('tender-title').value.trim(),
             project: document.getElementById('tender-project').value.trim() || null,

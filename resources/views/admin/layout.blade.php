@@ -197,6 +197,19 @@
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 12px;
         }
+        .form-stack {
+            display: grid;
+            gap: 14px;
+        }
+        .form-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
         .input, select {
             width: 100%;
             padding: 10px 12px;

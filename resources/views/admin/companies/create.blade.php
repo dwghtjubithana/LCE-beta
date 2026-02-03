@@ -15,16 +15,43 @@
 </div>
 
     <div class="card">
-    <div class="filters">
-        <input class="input" id="company-owner" placeholder="Owner User ID">
-        <input class="input" id="company-name" placeholder="Company name">
-        <input class="input" id="company-sector" placeholder="Sector">
-        <input class="input" id="company-experience" placeholder="Experience (optional)">
-        <input class="input" id="company-email" placeholder="Contact email (optional)">
-        <input class="input" id="company-phone" placeholder="Contact phone (optional)">
-        <input class="input" id="company-address" placeholder="Address (optional)">
-        <input class="input" id="company-city" placeholder="City (optional)">
-        <input class="input" id="company-country" placeholder="Country (optional)">
+    <div class="form-stack">
+        <div class="form-field">
+            <label for="company-owner">Owner User ID</label>
+            <input class="input" id="company-owner" placeholder="e.g. 4">
+        </div>
+        <div class="form-field">
+            <label for="company-name">Company name</label>
+            <input class="input" id="company-name" placeholder="e.g. Suriname Logistics">
+        </div>
+        <div class="form-field">
+            <label for="company-sector">Sector</label>
+            <input class="input" id="company-sector" placeholder="e.g. Transport">
+        </div>
+        <div class="form-field">
+            <label for="company-experience">Experience</label>
+            <input class="input" id="company-experience" placeholder="Optional">
+        </div>
+        <div class="form-field">
+            <label for="company-email">Contact email</label>
+            <input class="input" id="company-email" placeholder="Optional">
+        </div>
+        <div class="form-field">
+            <label for="company-phone">Contact phone</label>
+            <input class="input" id="company-phone" placeholder="Optional">
+        </div>
+        <div class="form-field">
+            <label for="company-address">Address</label>
+            <input class="input" id="company-address" placeholder="Optional">
+        </div>
+        <div class="form-field">
+            <label for="company-city">City</label>
+            <input class="input" id="company-city" placeholder="Optional">
+        </div>
+        <div class="form-field">
+            <label for="company-country">Country</label>
+            <input class="input" id="company-country" placeholder="Optional">
+        </div>
     </div>
     <div class="actions" style="margin-top:12px;">
         <button class="btn" id="btn-create">Create company</button>

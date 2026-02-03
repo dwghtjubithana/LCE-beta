@@ -18,7 +18,11 @@
                         <option value="">Kies documenttype</option>
                     </select>
                     <button type="button" id="uploadBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition shadow-md justify-center">
-                        <i data-lucide="upload-cloud" class="w-4 h-4"></i> Document Uploaden
+                        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                        <span>Document Uploaden</span>
+                        <span id="uploadSpinner" class="hidden items-center gap-2 text-xs font-semibold">
+                            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Analyseren...
+                        </span>
                     </button>
                     <button type="button" id="cameraBtn" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition shadow-md justify-center">
                         <i data-lucide="camera" class="w-4 h-4"></i> Camera

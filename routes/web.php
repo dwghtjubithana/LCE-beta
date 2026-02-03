@@ -96,11 +96,7 @@ Route::middleware('admin.basic')->group(function () {
         return view('admin.rules.show', ['id' => $id, 'active' => 'rules']);
     });
     Route::get('/admin/compliance-rules/{id}/edit', function ($id) {
-        return view('admin.placeholder', [
-            'title' => 'Edit Compliance Rule',
-            'active' => 'rules',
-            'subtitle' => 'Update rule details and constraints.',
-        ]);
+        return view('admin.rules.edit', ['id' => $id, 'active' => 'rules']);
     });
     Route::get('/admin/notifications', function () {
         return view('admin.notifications.index', ['active' => 'notifications']);

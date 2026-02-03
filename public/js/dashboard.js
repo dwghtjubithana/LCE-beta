@@ -325,7 +325,9 @@ function handleLogout() {
 // --- DASHBOARD DATA ---
 
 async function fetchDashboard() {
-  if (!document.getElementById('scoreMessage')) return;
+  const hasScoreUi = Boolean(document.getElementById('scoreMessage'));
+  const hasCategorySelect = Boolean(document.getElementById('categorySelect'));
+  if (!hasScoreUi && !hasCategorySelect) return;
   try {
     const res = await fetch(`${API_BASE}/companies/me/dashboard`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
@@ -340,7 +342,9 @@ async function fetchDashboard() {
     const data = await res.json();
 
     // Update Gauge
-    updateGauge(data.current_score);
+    if (hasScoreUi) {
+      updateGauge(data.current_score);
+    }
 
     // Update Stats from required_documents
     const required = Array.isArray(data.required_documents) ? data.required_documents : [];
@@ -361,19 +365,25 @@ async function fetchDashboard() {
       else counts.missing += 1;
     });
 
-    document.getElementById('statValid').textContent = counts.valid;
-    document.getElementById('statReview').textContent = counts.review + counts.missing;
-    document.getElementById('statProcessing').textContent = counts.processing;
-    document.getElementById('statInvalid').textContent = counts.invalid;
+    if (hasScoreUi) {
+      document.getElementById('statValid').textContent = counts.valid;
+      document.getElementById('statReview').textContent = counts.review + counts.missing;
+      document.getElementById('statProcessing').textContent = counts.processing;
+      document.getElementById('statInvalid').textContent = counts.invalid;
+    }
 
     // Update Message
-    const msgEl = document.getElementById('scoreMessage');
-    if (data.current_score >= 91) msgEl.textContent = 'Uitstekend! Uw compliance is op orde.';
-    else if (data.current_score >= 51) msgEl.textContent = 'Goed bezig, maar er ontbreken nog documenten.';
-    else msgEl.textContent = 'Let op: Uw compliance score is kritiek laag.';
+    if (hasScoreUi) {
+      const msgEl = document.getElementById('scoreMessage');
+      if (data.current_score >= 91) msgEl.textContent = 'Uitstekend! Uw compliance is op orde.';
+      else if (data.current_score >= 51) msgEl.textContent = 'Goed bezig, maar er ontbreken nog documenten.';
+      else msgEl.textContent = 'Let op: Uw compliance score is kritiek laag.';
+    }
   } catch (err) {
     console.error('Dashboard fetch error', err);
-    document.getElementById('scoreMessage').textContent = 'Kan dashboard niet laden.';
+    if (hasScoreUi) {
+      document.getElementById('scoreMessage').textContent = 'Kan dashboard niet laden.';
+    }
   }
 }
 
@@ -413,6 +423,23 @@ function updateGauge(score) {
   display.textContent = `${score}%`;
 }
 
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  try {
+    return new Intl.DateTimeFormat('nl-NL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  } catch (e) {
+    return date.toLocaleString();
+  }
+}
+
 // --- DOCUMENTS LIST ---
 
 async function fetchDocuments() {
@@ -446,13 +473,13 @@ async function fetchDocuments() {
       const safeTitle = escapeHtml(doc.title || doc.original_filename || 'Naamloos Document');
       const safeLabel = escapeHtml(label);
       const safeAction = escapeHtml(action);
-      const safeDate = escapeHtml(doc.updated_at || '-');
+      const safeDate = escapeHtml(formatDateTime(doc.updated_at || '-'));
       const docId = doc.id || doc.uuid || Math.random().toString(36).slice(2);
       const aiReason = escapeHtml(doc.extracted_data?.ai_reason || '');
       const aiFix = escapeHtml(doc.extracted_data?.ai_fix || '');
       const aiFeedback = escapeHtml(doc.ai_feedback || 'Geen AI-advies beschikbaar.');
       const detectedType = escapeHtml(doc.detected_type || doc.category_selected || 'Onbekend');
-      const expiry = escapeHtml(doc.expiry_date || '-');
+      const expiry = escapeHtml(formatDateTime(doc.expiry_date || '-'));
       const ocr = doc.ocr_confidence !== null && doc.ocr_confidence !== undefined ? `${doc.ocr_confidence}%` : '-';
       const ai = doc.ai_confidence !== null && doc.ai_confidence !== undefined ? `${doc.ai_confidence}%` : '-';
       const row = `
@@ -538,11 +565,17 @@ function getStatusUI(status) {
 async function handleFileUpload(file) {
   if (!file) return;
 
+  const category = document.getElementById('categorySelect')?.value;
+  if (!category) {
+    showToast('Kies eerst een documenttype.', 'error');
+    return;
+  }
+
+  setUploadBusy(true);
   showToast(`Uploaden: ${file.name}...`, 'info');
 
   const formData = new FormData();
   formData.append('file', file);
-  const category = document.getElementById('categorySelect')?.value;
   if (category) formData.append('category_selected', category);
 
   try {
@@ -562,7 +595,13 @@ async function handleFileUpload(file) {
       throw new Error(errData.message || 'Server weigert upload');
     }
 
-    showToast('Bestand succesvol geüpload', 'success');
+    const data = await res.json().catch(() => ({}));
+    const status = data?.document?.status || data?.document?.ui_label || '';
+    if (status && String(status).toUpperCase() !== 'PROCESSING') {
+      showToast(`Bestand geüpload. AI-analyse klaar (${status}).`, 'success');
+    } else {
+      showToast('Bestand geüpload. AI-analyse gestart.', 'success');
+    }
 
     // Refresh data
     fetchDocuments();
@@ -570,6 +609,28 @@ async function handleFileUpload(file) {
   } catch (err) {
     showToast(`Fout: ${err.message}`, 'error');
     console.error(err);
+  } finally {
+    setUploadBusy(false);
+  }
+}
+
+function setUploadBusy(isBusy) {
+  const uploadBtn = document.getElementById('uploadBtn');
+  const cameraBtn = document.getElementById('cameraBtn');
+  const spinner = document.getElementById('uploadSpinner');
+  if (uploadBtn) {
+    uploadBtn.disabled = isBusy;
+    uploadBtn.classList.toggle('opacity-70', isBusy);
+    uploadBtn.classList.toggle('cursor-not-allowed', isBusy);
+  }
+  if (cameraBtn) {
+    cameraBtn.disabled = isBusy;
+    cameraBtn.classList.toggle('opacity-70', isBusy);
+    cameraBtn.classList.toggle('cursor-not-allowed', isBusy);
+  }
+  if (spinner) {
+    spinner.classList.toggle('hidden', !isBusy);
+    spinner.classList.toggle('inline-flex', isBusy);
   }
 }
 
