@@ -3,10 +3,10 @@
 Tracks the latest change plus the previous two changes.
 
 ## Latest change
-- Added admin Gemini health check endpoint + UI button.
+- Converted dashboard into Blade view and served it directly at /.
 
 ## Previous change
-- Added production DB patch SQL and local-only production env file.
+- Routed / to dashboard (index.html) and moved public tenders to /tenders.
 
 ## Prior change
-- Fixed test failures: expiry date parsing and bulk notification test.
+- Fixed asset paths to load dashboard/public CSS/JS when web root is repo root.

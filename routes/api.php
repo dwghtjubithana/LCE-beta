@@ -10,10 +10,13 @@ use App\Http\Controllers\AdminTenderController;
 use App\Http\Controllers\AdminDocumentController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AdminNotificationController;
+use App\Http\Controllers\AdminPaymentProofController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ComplianceRuleController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\PaymentProofController;
 use App\Http\Controllers\TenderController;
+use App\Http\Controllers\UserNotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -24,24 +27,45 @@ Route::prefix('auth')->group(function () {
     Route::middleware('jwt')->post('logout', [AuthController::class, 'logout']);
 });
 
+// Public company profile
+Route::get('public/companies/{slug}', [CompanyController::class, 'publicProfile']);
+
+// Public tender feed (no auth)
+Route::get('public/tenders', [TenderController::class, 'indexPublic']);
+Route::get('public/tenders/{id}', [TenderController::class, 'showPublic']);
+
 Route::middleware('jwt')->group(function () {
+    // User-facing routes
+    Route::get('companies/me', [CompanyController::class, 'me']);
+    Route::get('companies/me/dashboard', [CompanyController::class, 'dashboardMe']);
+    Route::get('companies/me/profile.pdf', [CompanyController::class, 'profilePdfMe']);
+    Route::post('companies/me/profile-photo', [CompanyController::class, 'uploadProfilePhoto']);
+    Route::get('companies/me/documents', [DocumentController::class, 'listMine']);
+    Route::get('companies/{id}', [CompanyController::class, 'show']);
+    Route::patch('companies/{id}', [CompanyController::class, 'update']);
+    Route::get('companies/{id}/dashboard', [CompanyController::class, 'dashboard']);
+    Route::get('companies/{id}/profile.pdf', [CompanyController::class, 'profilePdf']);
+    Route::get('companies/slug-check', [CompanyController::class, 'slugCheck']);
+    Route::post('geocode', [CompanyController::class, 'geocode']);
+
+    Route::post('documents/upload', [DocumentController::class, 'upload']);
+    Route::post('documents/upload/bulk', [DocumentController::class, 'uploadBulk']);
+    Route::get('documents/{id}', [DocumentController::class, 'show']);
+    Route::get('companies/{id}/documents', [DocumentController::class, 'listByCompany']);
+    Route::get('documents/{id}/summary', [DocumentController::class, 'downloadSummary']);
+    Route::post('documents/{id}/reprocess', [DocumentController::class, 'reprocess']);
+    Route::post('documents/{id}/confirm', [DocumentController::class, 'confirm']);
+
+    Route::post('payment-proofs', [PaymentProofController::class, 'store']);
+    Route::get('payment-proofs/latest', [PaymentProofController::class, 'latest']);
+    Route::get('notifications', [UserNotificationController::class, 'index']);
+
+    Route::get('tenders', [TenderController::class, 'index']);
+    Route::get('tenders/{id}', [TenderController::class, 'show']);
+
+    // Admin-only routes
     Route::middleware('admin.role')->group(function () {
         Route::post('companies', [CompanyController::class, 'store']);
-        Route::get('companies/me', [CompanyController::class, 'me']);
-        Route::get('companies/{id}', [CompanyController::class, 'show']);
-        Route::patch('companies/{id}', [CompanyController::class, 'update']);
-        Route::get('companies/{id}/dashboard', [CompanyController::class, 'dashboard']);
-        Route::get('companies/{id}/profile.pdf', [CompanyController::class, 'profilePdf']);
-
-        Route::post('documents/upload', [DocumentController::class, 'upload']);
-        Route::post('documents/upload/bulk', [DocumentController::class, 'uploadBulk']);
-        Route::get('documents/{id}', [DocumentController::class, 'show']);
-        Route::get('companies/{id}/documents', [DocumentController::class, 'listByCompany']);
-        Route::get('documents/{id}/summary', [DocumentController::class, 'downloadSummary']);
-        Route::post('documents/{id}/reprocess', [DocumentController::class, 'reprocess']);
-
-        Route::get('tenders', [TenderController::class, 'index']);
-        Route::get('tenders/{id}', [TenderController::class, 'show']);
 
         Route::get('admin/audit-logs', [AuditLogController::class, 'index']);
         Route::get('admin/companies', [AdminCompanyController::class, 'index']);
@@ -70,5 +94,8 @@ Route::middleware('jwt')->group(function () {
         Route::get('admin/health', [AdminHealthController::class, 'show']);
         Route::get('admin/metrics', [AdminMetricsController::class, 'index']);
         Route::get('admin/gemini/health', [AdminGeminiController::class, 'health']);
+        Route::get('admin/payment-proofs', [AdminPaymentProofController::class, 'index']);
+        Route::post('admin/payment-proofs/{id}/approve', [AdminPaymentProofController::class, 'approve']);
+        Route::post('admin/payment-proofs/{id}/reject', [AdminPaymentProofController::class, 'reject']);
     });
 });

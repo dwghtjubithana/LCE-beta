@@ -3,6 +3,25 @@
 Chronological record of changes. Append newest entries at the top.
 
 ## Unreleased
+- 2026-02-03 — Routing — Converted dashboard to Blade view and served it at /.
+- 2026-02-03 — Routing — Redirected / to index.html and moved public tenders to /tenders.
+- 2026-02-03 — Fix — Updated asset paths to /public/* to resolve 404s for CSS/JS.
+- 2026-02-03 — Phase 1/Frontend — Added slug availability check, geocoding helper, and mobile polish tweaks.
+- 2026-02-03 — Phase 6/Admin — Added admin UI for payment proof review and approve/reject actions.
+- 2026-02-03 — Phase 6 — Implemented pending items: document confirmation flow, user notifications API, admin payment-proof review, and verification badge rules.
+- 2026-02-03 — DB Patch — Added separate patch for public profile fields on companies.
+- 2026-02-03 — Phase 1/Frontend — Implemented Digital ID public profile page + slug API + dashboard editor.
+- 2026-02-03 — Phase 5/Backend — Added payment proof upload API + wired frontend to submit proofs.
+- 2026-02-03 — DB Patch — Added bundled patch for tenders direct work, public company profile fields, and payment proofs table.
+- 2026-02-03 — DB Patch — Added db patch to add tenders.is_direct_work flag and backfill matches.
+- 2026-02-03 — Phase 2/Frontend — Wired Direct Werk flag + added tender detail page and routing.
+- 2026-02-03 — Phase 2/Frontend — Added public Tender Radar page + public tenders API endpoints with blur gating.
+- 2026-02-03 — Phase 5/Frontend — Added upgrade/gating UI and payment proof placeholder flow for users.
+- 2026-02-03 — Phase 4/Frontend — Added Action Required panel and adjusted score thresholds per user stories.
+- 2026-02-03 — Phase 3/Frontend — Added document detail panel with AI advice and status metadata.
+- 2026-02-03 — Phase 3/Frontend — Improved document upload UX (drag/drop + camera), category selection, and status labels.
+- 2026-02-03 — Phase 1/Frontend — Added company profile form + profile PDF download in user dashboard.
+- 2026-02-03 — Phase 5/Frontend — Opened user API access + added /companies/me endpoints; aligned frontend API usage.
 - 2026-01-26 — Phase 7 — Added admin Gemini health check endpoint + admin UI button.
 - 2026-01-26 — Phase 0/1 — Added production DB patch SQL and local-only production env file.
 - 2026-01-26 — Phase 8 — Fixed expiry date parsing and admin bulk notification test.

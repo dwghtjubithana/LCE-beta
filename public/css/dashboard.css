@@ -1,0 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+body { font-family: 'Inter', sans-serif; }
+
+.gauge-ring {
+  transition: stroke-dashoffset 1s ease-out, stroke 0.3s ease;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+/* Modal Backdrop Fade */
+.modal-enter { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+.modal-active { opacity: 1; pointer-events: auto; }

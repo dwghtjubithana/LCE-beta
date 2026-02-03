@@ -32,5 +32,18 @@ class TenderSeeder extends Seeder
                 'description' => 'Design and build a 20MW solar farm.',
             ]
         );
+
+        Tender::updateOrCreate(
+            ['title' => '5 lassers gezocht voor morgen'],
+            [
+                'project' => 'Direct Werk',
+                'date' => now()->format('Y-m-d'),
+                'client' => 'Welding Services NV',
+                'details_url' => 'https://wa.me/597000000',
+                'attachments' => [],
+                'description' => 'Direct werk: 5 lassers gezocht voor een 1-daagse klus. Start morgen 07:00.',
+                'is_direct_work' => true,
+            ]
+        );
     }
 }

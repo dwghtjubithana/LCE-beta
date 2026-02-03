@@ -19,12 +19,21 @@ class Company extends Model
         'bluewave_status',
         'current_score',
         'verification_level',
+        'public_slug',
+        'display_name',
+        'profile_photo_path',
+        'address',
+        'lat',
+        'lng',
+        'verification_status',
     ];
 
     protected $casts = [
         'contact' => 'array',
         'bluewave_status' => 'boolean',
         'current_score' => 'integer',
+        'lat' => 'float',
+        'lng' => 'float',
     ];
 
     public const REQUIRED_DOC_TYPES = [

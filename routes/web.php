@@ -3,7 +3,19 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('dashboard');
+});
+
+Route::get('/tenders', function () {
+    return view('tenders.public');
+});
+
+Route::get('/tenders/{id}', function ($id) {
+    return view('tenders.show', ['id' => $id]);
+});
+
+Route::get('/p/{slug}', function ($slug) {
+    return view('public.profile', ['slug' => $slug]);
 });
 
 Route::get('/admin/login', function () {
@@ -75,6 +87,9 @@ Route::middleware('admin.basic')->group(function () {
     });
     Route::get('/admin/notifications/{id}', function ($id) {
         return view('admin.notifications.show', ['id' => $id, 'active' => 'notifications']);
+    });
+    Route::get('/admin/payment-proofs', function () {
+        return view('admin.payment-proofs.index', ['active' => 'payment-proofs']);
     });
     Route::get('/admin/audit-logs', function () {
         return view('admin.logs.index', ['active' => 'logs']);

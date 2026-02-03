@@ -1,0 +1,7 @@
+[26-Jan-2026 14:36:53 UTC] PHP Fatal error:  Uncaught RuntimeException: Composer detected issues in your platform: Your Composer dependencies require a PHP version ">= 8.4.0". You are running 8.2.30. in /home/customer/www/wapcomtek.com/public_html/Wapcore/LCE-beta/vendor/composer/platform_check.php:22
+Stack trace:
+#0 /home/customer/www/wapcomtek.com/public_html/Wapcore/LCE-beta/vendor/composer/autoload_real.php(25): require()
+#1 /home/customer/www/wapcomtek.com/public_html/Wapcore/LCE-beta/vendor/autoload.php(22): ComposerAutoloaderInitc514d8f7b9fc5970bdd94287905ef584::getLoader()
+#2 /home/customer/www/wapcomtek.com/public_html/Wapcore/LCE-beta/public/index.php(14): require('/home/customer/...')
+#3 {main}
+  thrown in /home/customer/www/wapcomtek.com/public_html/Wapcore/LCE-beta/vendor/composer/platform_check.php on line 22

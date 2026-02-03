@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\UploadDocumentRequest;
 use App\Http\Requests\BulkUploadDocumentRequest;
 use App\Http\Requests\ReprocessDocumentRequest;
+use App\Http\Requests\ConfirmDocumentRequest;
 use App\Jobs\ProcessDocument;
 use App\Models\Company;
 use App\Models\Document;
@@ -233,6 +234,21 @@ class DocumentController extends Controller
         ]);
     }
 
+    public function listMine(): JsonResponse
+    {
+        $user = $this->authUser();
+        $company = Company::where('owner_user_id', $user->id)->first();
+
+        if (!$company) {
+            return response()->json([
+                'code' => 'NOT_FOUND',
+                'message' => 'Company not found.',
+            ], 404);
+        }
+
+        return $this->listByCompany($company->id);
+    }
+
     public function downloadSummary(int $id)
     {
         $user = $this->authUser();
@@ -291,6 +307,39 @@ class DocumentController extends Controller
         ProcessDocument::dispatch($document->id);
         $audit->record($user, 'document.reprocess', 'document', $document->id, [
             'company_id' => $document->company_id,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'document' => $this->withUiStatus($document),
+        ]);
+    }
+
+    public function confirm(ConfirmDocumentRequest $request, AuditLogService $audit, int $id): JsonResponse
+    {
+        $user = $this->authUser();
+        $document = Document::query()
+            ->where('id', $id)
+            ->whereHas('company', function ($query) use ($user) {
+                $query->where('owner_user_id', $user->id);
+            })
+            ->first();
+
+        if (!$document) {
+            return response()->json([
+                'code' => 'NOT_FOUND',
+                'message' => 'Document not found.',
+            ], 404);
+        }
+
+        $document->category_selected = $request->input('category_selected');
+        $document->status = 'PROCESSING';
+        $document->save();
+
+        ProcessDocument::dispatch($document->id);
+        $audit->record($user, 'document.confirm', 'document', $document->id, [
+            'company_id' => $document->company_id,
+            'category_selected' => $document->category_selected,
         ]);
 
         return response()->json([

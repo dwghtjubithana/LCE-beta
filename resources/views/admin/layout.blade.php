@@ -256,6 +256,7 @@
                 <h3>Management</h3>
                 <a href="/admin/compliance-rules" class="{{ ($active ?? '') === 'rules' ? 'active' : '' }}">Compliance Rules</a>
                 <a href="/admin/notifications" class="{{ ($active ?? '') === 'notifications' ? 'active' : '' }}">Notifications</a>
+                <a href="/admin/payment-proofs" class="{{ ($active ?? '') === 'payment-proofs' ? 'active' : '' }}">Payment Proofs</a>
                 <a href="/admin/audit-logs" class="{{ ($active ?? '') === 'logs' ? 'active' : '' }}">Audit Logs</a>
                 <a href="/admin/system" class="{{ ($active ?? '') === 'system' ? 'active' : '' }}">System Health</a>
             </nav>

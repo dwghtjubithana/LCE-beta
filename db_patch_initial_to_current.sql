@@ -319,3 +319,107 @@ SET
   `plan_status` = 'ACTIVE',
   `status` = 'ACTIVE'
 WHERE `email` = 'dwightjubi@gmail.com';
+
+-- Bundle patch: Direct Werk + Public Profile + Payment Proofs (2026-02-03)
+
+-- Tenders: is_direct_work flag
+SET @tbl = 'tenders';
+SET @sql = IF(
+  EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@schema_name AND TABLE_NAME=@tbl AND COLUMN_NAME='is_direct_work'),
+  'SELECT 1;',
+  'ALTER TABLE `tenders` ADD COLUMN `is_direct_work` tinyint(1) NOT NULL DEFAULT 0 AFTER `description`;'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Backfill direct work based on keywords (best-effort)
+UPDATE `tenders`
+SET `is_direct_work` = 1
+WHERE LOWER(`title`) LIKE '%direct werk%'
+   OR LOWER(`project`) LIKE '%direct werk%'
+   OR LOWER(`title`) LIKE '%lassers%'
+   OR LOWER(`description`) LIKE '%direct werk%'
+   OR LOWER(`description`) LIKE '%lassers%';
+
+-- Companies: public profile fields
+SET @tbl = 'companies';
+SET @sql = IF(
+  EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@schema_name AND TABLE_NAME=@tbl AND COLUMN_NAME='public_slug'),
+  'SELECT 1;',
+  'ALTER TABLE `companies` ADD COLUMN `public_slug` varchar(120) NULL AFTER `company_name`;'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@schema_name AND TABLE_NAME=@tbl AND COLUMN_NAME='display_name'),
+  'SELECT 1;',
+  'ALTER TABLE `companies` ADD COLUMN `display_name` varchar(160) NULL AFTER `public_slug`;'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@schema_name AND TABLE_NAME=@tbl AND COLUMN_NAME='profile_photo_path'),
+  'SELECT 1;',
+  'ALTER TABLE `companies` ADD COLUMN `profile_photo_path` varchar(255) NULL AFTER `display_name`;'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@schema_name AND TABLE_NAME=@tbl AND COLUMN_NAME='address'),
+  'SELECT 1;',
+  'ALTER TABLE `companies` ADD COLUMN `address` varchar(255) NULL AFTER `profile_photo_path`;'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@schema_name AND TABLE_NAME=@tbl AND COLUMN_NAME='lat'),
+  'SELECT 1;',
+  'ALTER TABLE `companies` ADD COLUMN `lat` decimal(10,7) NULL AFTER `address`;'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@schema_name AND TABLE_NAME=@tbl AND COLUMN_NAME='lng'),
+  'SELECT 1;',
+  'ALTER TABLE `companies` ADD COLUMN `lng` decimal(10,7) NULL AFTER `lat`;'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@schema_name AND TABLE_NAME=@tbl AND COLUMN_NAME='verification_status'),
+  'SELECT 1;',
+  "ALTER TABLE `companies` ADD COLUMN `verification_status` varchar(20) NOT NULL DEFAULT 'GRAY' AFTER `lng`;"
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Unique index for public slug
+SET @sql = IF(
+  EXISTS (SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=@schema_name AND TABLE_NAME=@tbl AND INDEX_NAME='companies_public_slug_unique'),
+  'SELECT 1;',
+  'ALTER TABLE `companies` ADD UNIQUE KEY `companies_public_slug_unique` (`public_slug`);'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Payment proofs table
+SET @tbl = 'payment_proofs';
+SET @sql = IF(
+  EXISTS (SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=@schema_name AND TABLE_NAME=@tbl),
+  'SELECT 1;',
+  'CREATE TABLE `payment_proofs` (
+     `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+     `user_id` bigint unsigned NOT NULL,
+     `company_id` bigint unsigned DEFAULT NULL,
+     `file_path` varchar(255) NOT NULL,
+     `status` varchar(30) NOT NULL DEFAULT ''PENDING'',
+     `notes` text DEFAULT NULL,
+     `reviewed_by` bigint unsigned DEFAULT NULL,
+     `submitted_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+     `reviewed_at` timestamp NULL DEFAULT NULL,
+     `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+     `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     PRIMARY KEY (`id`),
+     KEY `payment_proofs_user_id_index` (`user_id`),
+     KEY `payment_proofs_company_id_index` (`company_id`),
+     KEY `payment_proofs_status_index` (`status`)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

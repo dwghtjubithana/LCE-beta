@@ -17,10 +17,12 @@ class Tender extends Model
         'details_url',
         'attachments',
         'description',
+        'is_direct_work',
     ];
 
     protected $casts = [
         'date' => 'date',
         'attachments' => 'array',
+        'is_direct_work' => 'boolean',
     ];
 }
