@@ -29,6 +29,7 @@ Route::prefix('auth')->group(function () {
 
 // Public company profile
 Route::get('public/companies/{slug}', [CompanyController::class, 'publicProfile']);
+Route::get('public/companies/{slug}/photo', [CompanyController::class, 'publicPhoto']);
 
 // Public tender feed (no auth)
 Route::get('public/tenders', [TenderController::class, 'indexPublic']);
@@ -41,12 +42,13 @@ Route::middleware('jwt')->group(function () {
     Route::get('companies/me/dashboard', [CompanyController::class, 'dashboardMe']);
     Route::get('companies/me/profile.pdf', [CompanyController::class, 'profilePdfMe']);
     Route::post('companies/me/profile-photo', [CompanyController::class, 'uploadProfilePhoto']);
-    Route::get('companies/me/documents', [DocumentController::class, 'listMine']);
-    Route::get('companies/{id}', [CompanyController::class, 'show']);
-    Route::patch('companies/{id}', [CompanyController::class, 'update']);
-    Route::get('companies/{id}/dashboard', [CompanyController::class, 'dashboard']);
-    Route::get('companies/{id}/profile.pdf', [CompanyController::class, 'profilePdf']);
     Route::get('companies/slug-check', [CompanyController::class, 'slugCheck']);
+    Route::get('companies/me/documents', [DocumentController::class, 'listMine']);
+    Route::get('companies/{id}', [CompanyController::class, 'show'])->where('id', '[0-9]+');
+    Route::patch('companies/{id}', [CompanyController::class, 'update'])->where('id', '[0-9]+');
+    Route::get('companies/{id}/dashboard', [CompanyController::class, 'dashboard'])->where('id', '[0-9]+');
+    Route::get('companies/{id}/profile.pdf', [CompanyController::class, 'profilePdf'])->where('id', '[0-9]+');
+    Route::get('companies/me/profile-photo', [CompanyController::class, 'profilePhotoMe']);
     Route::post('geocode', [CompanyController::class, 'geocode']);
 
     Route::post('documents/upload', [DocumentController::class, 'upload']);
@@ -59,6 +61,7 @@ Route::middleware('jwt')->group(function () {
 
     Route::post('payment-proofs', [PaymentProofController::class, 'store']);
     Route::get('payment-proofs/latest', [PaymentProofController::class, 'latest']);
+    Route::get('payment-proofs/latest/file', [PaymentProofController::class, 'latestFile']);
     Route::get('notifications', [UserNotificationController::class, 'index']);
 
     Route::get('tenders', [TenderController::class, 'index']);

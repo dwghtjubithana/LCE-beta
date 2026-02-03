@@ -218,7 +218,7 @@ class CompanyController extends Controller
         }
 
         $photoUrl = $company->profile_photo_path
-            ? Storage::disk('public')->url($company->profile_photo_path)
+            ? url("/api/public/companies/{$company->public_slug}/photo")
             : null;
 
         return response()->json([
@@ -262,8 +262,51 @@ class CompanyController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'photo_url' => Storage::disk('public')->url($path),
+            'photo_url' => url('/api/companies/me/profile-photo'),
         ]);
+    }
+
+    public function profilePhotoMe()
+    {
+        $user = $this->authUser();
+        $company = Company::where('owner_user_id', $user->id)->first();
+        if (!$company || !$company->profile_photo_path) {
+            return response()->json([
+                'code' => 'NOT_FOUND',
+                'message' => 'Photo not found.',
+            ], 404);
+        }
+
+        $path = storage_path('app/public/' . $company->profile_photo_path);
+        if (!is_file($path)) {
+            return response()->json([
+                'code' => 'NOT_FOUND',
+                'message' => 'Photo not found.',
+            ], 404);
+        }
+
+        return response()->file($path);
+    }
+
+    public function publicPhoto(string $slug)
+    {
+        $company = Company::where('public_slug', $slug)->first();
+        if (!$company || !$company->profile_photo_path) {
+            return response()->json([
+                'code' => 'NOT_FOUND',
+                'message' => 'Photo not found.',
+            ], 404);
+        }
+
+        $path = storage_path('app/public/' . $company->profile_photo_path);
+        if (!is_file($path)) {
+            return response()->json([
+                'code' => 'NOT_FOUND',
+                'message' => 'Photo not found.',
+            ], 404);
+        }
+
+        return response()->file($path);
     }
 
     public function slugCheck(): JsonResponse

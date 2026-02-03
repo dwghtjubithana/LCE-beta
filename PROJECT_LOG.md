@@ -3,6 +3,9 @@
 Chronological record of changes. Append newest entries at the top.
 
 ## Unreleased
+- 2026-02-03 — UX — Added payment proof preview for users (image or link).
+- 2026-02-03 — Fix — Profile photo preview now uses auth fetch; geocode falls back to client-side.
+- 2026-02-03 — Fix — Resolved slug-check route conflict and added profile photo preview/serve endpoints.
 - 2026-02-03 — UX — Added mobile drawer navigation for user menu.
 - 2026-02-03 — UX — Hid login modal by default to prevent flash during navigation.
 - 2026-02-03 — Fix — Allowed user company creation and improved no-company handling.

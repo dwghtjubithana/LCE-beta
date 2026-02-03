@@ -146,6 +146,7 @@ async function initializeSession() {
     fetchDashboard();
     fetchDocuments();
     fetchNotifications();
+    fetchPaymentProofPreview();
   } catch (err) {
     console.error(err);
     handleLogout(); // Bij twijfel: uitloggen
@@ -627,6 +628,15 @@ function populateDigitalIdForm(company) {
     link.href = slug ? `/p/${slug}` : '#';
     link.textContent = slug ? `Bekijk publieke link: /p/${slug}` : 'Stel je slug in om de link te zien';
   }
+
+  const preview = document.getElementById('profilePhotoPreview');
+  if (preview) {
+    if (company.profile_photo_path) {
+      loadProfilePhotoPreview();
+    } else {
+      preview.classList.add('hidden');
+    }
+  }
 }
 
 const companyCreateForm = document.getElementById('companyCreateForm');
@@ -770,11 +780,29 @@ async function handleProfilePhotoUpload(e) {
 
     showToast('Profielfoto geüpload', 'success');
     if (statusEl) statusEl.textContent = 'Profielfoto geüpload.';
+    await loadProfilePhotoPreview();
   } catch (err) {
     showToast(err.message || 'Upload mislukt', 'error');
     if (statusEl) statusEl.textContent = 'Upload mislukt.';
   }
   e.target.value = '';
+}
+
+async function loadProfilePhotoPreview() {
+  const preview = document.getElementById('profilePhotoPreview');
+  if (!preview) return;
+  try {
+    const res = await fetch(`${API_BASE}/companies/me/profile-photo`, {
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    if (!res.ok) throw new Error('Foto niet gevonden');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    preview.src = url;
+    preview.classList.remove('hidden');
+  } catch (err) {
+    preview.classList.add('hidden');
+  }
 }
 
 async function handleSlugCheck() {
@@ -818,10 +846,32 @@ async function handleGeocode() {
       body: JSON.stringify({ address }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || 'Geocode mislukt');
+    if (!res.ok) {
+      if (data.code === 'GEOCODE_FAILED') {
+        await handleClientSideGeocode(address, statusEl);
+        return;
+      }
+      throw new Error(data.message || 'Geocode mislukt');
+    }
     document.getElementById('latInput').value = data.lat || '';
     document.getElementById('lngInput').value = data.lng || '';
     if (statusEl) statusEl.textContent = 'Locatie ingevuld.';
+  } catch (err) {
+    if (statusEl) statusEl.textContent = err.message || 'Geocode mislukt.';
+  }
+}
+
+async function handleClientSideGeocode(address, statusEl) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error('Geocode mislukt (client)');
+    const data = await res.json();
+    const item = Array.isArray(data) && data.length ? data[0] : null;
+    if (!item) throw new Error('Geen locatie gevonden');
+    document.getElementById('latInput').value = item.lat || '';
+    document.getElementById('lngInput').value = item.lon || '';
+    if (statusEl) statusEl.textContent = 'Locatie ingevuld (client).';
   } catch (err) {
     if (statusEl) statusEl.textContent = err.message || 'Geocode mislukt.';
   }
@@ -939,9 +989,43 @@ async function handlePaymentProof(e) {
     showToast('Betaalbewijs ontvangen. Admin zal dit beoordelen.', 'success');
     if (statusEl) statusEl.textContent = 'Betaalbewijs ontvangen. Status: Pending Payment.';
     if (data.user) updatePlanBadges(data.user);
+    await fetchPaymentProofPreview(true);
   } catch (err) {
     showToast(err.message || 'Upload mislukt', 'error');
     if (statusEl) statusEl.textContent = 'Upload mislukt. Probeer opnieuw.';
   }
   e.target.value = '';
+}
+
+async function fetchPaymentProofPreview(force = false) {
+  const preview = document.getElementById('paymentProofPreview');
+  const link = document.getElementById('paymentProofLink');
+  if (!preview || !link) return;
+  try {
+    const res = await fetch(`${API_BASE}/payment-proofs/latest`, {
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data?.payment_proof) return;
+
+    const fileRes = await fetch(`${API_BASE}/payment-proofs/latest/file${force ? `?ts=${Date.now()}` : ''}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    if (!fileRes.ok) return;
+    const blob = await fileRes.blob();
+    const url = URL.createObjectURL(blob);
+    if (blob.type.startsWith('image/')) {
+      preview.src = url;
+      preview.classList.remove('hidden');
+      link.classList.add('hidden');
+    } else {
+      link.href = url;
+      link.textContent = 'Open betaalbewijs';
+      link.classList.remove('hidden');
+      preview.classList.add('hidden');
+    }
+  } catch (err) {
+    // best-effort
+  }
 }

@@ -56,6 +56,10 @@
                 <input type="file" id="profilePhotoInput" class="hidden" accept="image/*">
                 <div id="digitalIdStatus" class="text-sm text-slate-500 flex items-center"></div>
             </div>
+            <div class="md:col-span-2">
+                <div class="text-xs text-slate-400 mb-2">Huidige profielfoto</div>
+                <img id="profilePhotoPreview" class="w-24 h-24 rounded-xl border border-slate-200 object-cover hidden" alt="Profielfoto">
+            </div>
         </form>
     </div>
 </div>

@@ -72,6 +72,31 @@ class PaymentProofController extends Controller
         ]);
     }
 
+    public function latestFile()
+    {
+        $user = $this->authUser();
+        $proof = PaymentProof::where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$proof || !$proof->file_path) {
+            return response()->json([
+                'code' => 'NOT_FOUND',
+                'message' => 'Payment proof not found.',
+            ], 404);
+        }
+
+        $path = storage_path('app/' . $proof->file_path);
+        if (!is_file($path)) {
+            return response()->json([
+                'code' => 'NOT_FOUND',
+                'message' => 'Payment proof not found.',
+            ], 404);
+        }
+
+        return response()->file($path);
+    }
+
     private function resolveCompany(User $user, ?int $companyId): ?Company
     {
         $query = Company::where('owner_user_id', $user->id);

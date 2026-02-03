@@ -55,6 +55,11 @@
                         <input type="file" id="paymentInput" class="hidden" accept="image/*,application/pdf">
                     </div>
                     <div class="mt-3 text-sm text-slate-500" id="paymentStatus">Nog geen betaalbewijs geüpload.</div>
+                    <div class="mt-4">
+                        <div class="text-xs text-slate-400 mb-2">Laatste betaalbewijs</div>
+                        <img id="paymentProofPreview" class="w-48 h-32 object-cover rounded-lg border border-slate-200 hidden" alt="Betaalbewijs">
+                        <a id="paymentProofLink" class="text-xs text-blue-600 hover:text-blue-700 font-semibold hidden" target="_blank" rel="noopener">Open betaalbewijs</a>
+                    </div>
                 </div>
             </div>
         </div>
