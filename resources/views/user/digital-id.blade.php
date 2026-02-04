@@ -1,15 +1,15 @@
 @extends('user.layout')
 
-@section('title', 'Digital ID')
+@section('title', 'Digitale ID')
 @php($active = 'digital-id')
-@section('page_title', 'Digital ID')
+@section('page_title', 'Digitale ID')
 
 @section('content')
 <div class="max-w-5xl mx-auto space-y-8">
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
             <div>
-                <h3 class="font-bold text-slate-800 text-lg">Digital ID</h3>
+                <h3 class="font-bold text-slate-800 text-lg">Digitale ID</h3>
                 <p class="text-sm text-slate-500">Maak je publieke profiel en deel het via WhatsApp.</p>
             </div>
             <div class="flex items-center gap-2">
@@ -48,7 +48,7 @@
             </div>
             <div class="md:col-span-2 flex flex-col sm:flex-row gap-3 pt-2">
                 <button type="submit" id="saveDigitalIdBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition shadow-md">
-                    <i data-lucide="save" class="w-4 h-4"></i> Digital ID Opslaan
+                    <i data-lucide="save" class="w-4 h-4"></i> Digitale ID Opslaan
                 </button>
                 <button type="button" id="uploadPhotoBtn" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition shadow-md">
                     <i data-lucide="image" class="w-4 h-4"></i> Profielfoto uploaden

@@ -54,7 +54,7 @@
                 <td>${log.action || '-'}</td>
                 <td>${log.target_type || '-'}</td>
                 <td>${log.target_id || '-'}</td>
-                <td>${log.created_at || '-'}</td>
+                <td>${AdminApp.formatDateTime(log.created_at)}</td>
             </tr>
         `).join('');
         document.getElementById('logs-table').innerHTML = `

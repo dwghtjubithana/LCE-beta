@@ -98,6 +98,11 @@
             border-color: var(--line);
             color: var(--ink);
         }
+        .btn.danger {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: white;
+        }
         .main {
             display: flex;
             flex-direction: column;
@@ -232,6 +237,9 @@
             background: #eef2ff;
             color: #1e40af;
         }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-warn { background: #fef9c3; color: #854d0e; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
         .status {
             font-size: 13px;
             color: var(--muted);
@@ -264,14 +272,15 @@
                 <h3>Core</h3>
                 <a href="/admin/users" class="{{ ($active ?? '') === 'users' ? 'active' : '' }}">Users</a>
                 <a href="/admin/companies" class="{{ ($active ?? '') === 'companies' ? 'active' : '' }}">Companies</a>
-                <a href="/admin/documents" class="{{ ($active ?? '') === 'documents' ? 'active' : '' }}">Documents</a>
+                <a href="/admin/documents" class="{{ ($active ?? '') === 'documents' ? 'active' : '' }}">Documenten</a>
                 <a href="/admin/tenders" class="{{ ($active ?? '') === 'tenders' ? 'active' : '' }}">Tenders</a>
                 <h3>Management</h3>
                 <a href="/admin/compliance-rules" class="{{ ($active ?? '') === 'rules' ? 'active' : '' }}">Compliance Rules</a>
                 <a href="/admin/notifications" class="{{ ($active ?? '') === 'notifications' ? 'active' : '' }}">Notifications</a>
                 <a href="/admin/payment-proofs" class="{{ ($active ?? '') === 'payment-proofs' ? 'active' : '' }}">Payment Proofs</a>
                 <a href="/admin/audit-logs" class="{{ ($active ?? '') === 'logs' ? 'active' : '' }}">Audit Logs</a>
-                <a href="/admin/system" class="{{ ($active ?? '') === 'system' ? 'active' : '' }}">System Health</a>
+                <a href="/admin/system" class="{{ ($active ?? '') === 'system' ? 'active' : '' }}">Systeemstatus</a>
+                <a href="/admin/ai-settings" class="{{ ($active ?? '') === 'ai-settings' ? 'active' : '' }}">AI-instellingen</a>
             </nav>
             <div class="sidebar-footer">
                 <button class="btn secondary" id="btn-logout">Sign out</button>
@@ -282,11 +291,11 @@
             <div class="topbar">
                 <div class="search">
                     <span>🔍</span>
-                    <input type="text" placeholder="Search users, companies, tenders">
+                    <input type="text" placeholder="Zoek gebruikers, bedrijven, aanbestedingen">
                 </div>
                 <div class="topbar-right">
                     <span class="pill">Notifications</span>
-                    <span class="pill" id="admin-user">Admin</span>
+                    <span class="pill" id="admin-user">Beheerder</span>
                 </div>
             </div>
             <main class="content">
@@ -351,6 +360,28 @@
                 if (!target) return;
                 target.textContent = message;
                 target.className = `status ${type}`;
+            },
+            formatDateTime(value) {
+                if (!value) return '—';
+                const d = new Date(value);
+                if (Number.isNaN(d.getTime())) return String(value);
+                return d.toLocaleString('nl-NL', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                });
+            },
+            formatDate(value) {
+                if (!value) return '—';
+                const d = new Date(value);
+                if (Number.isNaN(d.getTime())) return String(value);
+                return d.toLocaleDateString('nl-NL', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                });
             },
             async initTopbar() {
                 const token = this.getToken();

@@ -18,17 +18,26 @@ class RuleEngine
         }
 
         $reasons = [];
-        $status = 'PASS';
+        $status = 'VALID';
 
-        $issueDateRequired = (bool) ($rule->constraints['issue_date_required'] ?? false);
+        $constraints = is_array($rule->constraints) ? $rule->constraints : [];
+        $requiredFields = [];
+        if (!empty($constraints['required_fields']) && is_array($constraints['required_fields'])) {
+            $requiredFields = $constraints['required_fields'];
+        }
+
+        $issueDateRequired = in_array('issue_date', $requiredFields, true)
+            || (bool) ($constraints['issue_date_required'] ?? false);
         if ($issueDateRequired && empty($extractedData['issue_date'])) {
-            $status = 'FAIL';
+            $status = 'INVALID';
             $reasons[] = 'Issue date is missing.';
         }
 
-        $expiryDateRequired = (bool) ($rule->constraints['expiry_date_required'] ?? false);
+        $expiryDateRequired = in_array('expiry_date', $requiredFields, true)
+            || (bool) ($constraints['expiry_required'] ?? false)
+            || (bool) ($constraints['expiry_date_required'] ?? false);
         if ($expiryDateRequired && empty($extractedData['expiry_date'])) {
-            $status = 'FAIL';
+            $status = 'INVALID';
             $reasons[] = 'Expiry date is missing.';
         }
 
@@ -40,7 +49,7 @@ class RuleEngine
                 $interval = $issue->diff($now);
                 $ageMonths = ($interval->y * 12) + $interval->m;
                 if ($ageMonths > (int) $maxAgeMonths) {
-                    $status = 'FAIL';
+                    $status = 'INVALID';
                     $reasons[] = 'Issue date exceeds maximum age.';
                 }
             } else {
@@ -52,7 +61,7 @@ class RuleEngine
         if (!empty($extractedData['expiry_date'])) {
             $expiry = $this->parseIssueDate($extractedData['expiry_date']);
             if ($expiry && $expiry < new \DateTime('now')) {
-                $status = 'FAIL';
+                $status = 'INVALID';
                 $reasons[] = 'Document is expired.';
             }
         }
@@ -68,7 +77,7 @@ class RuleEngine
 
         return [
             'status' => $status,
-            'confidence' => $status === 'PASS' ? 0.92 : 0.6,
+            'confidence' => $status === 'VALID' ? 0.92 : 0.6,
             'reasons' => $reasons,
         ];
     }

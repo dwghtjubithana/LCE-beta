@@ -69,13 +69,17 @@
                 <i data-lucide="file-text" class="w-5 h-5"></i>
                 <span>Documenten</span>
             </a>
+            <a href="/user/tenders" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'tenders' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
+                <i data-lucide="briefcase" class="w-5 h-5"></i>
+                <span>Aanbestedingen</span>
+            </a>
             <a href="/profile" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'profile' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
                 <i data-lucide="building" class="w-5 h-5"></i>
                 <span>Bedrijfsprofiel</span>
             </a>
             <a href="/digital-id" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'digital-id' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
                 <i data-lucide="id-card" class="w-5 h-5"></i>
-                <span>Digital ID</span>
+                <span>Digitale ID</span>
             </a>
             <a href="/upgrade" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'upgrade' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
                 <i data-lucide="sparkles" class="w-5 h-5"></i>
@@ -109,13 +113,17 @@
                 <i data-lucide="file-text" class="w-5 h-5"></i>
                 <span>Documenten</span>
             </a>
+            <a href="/user/tenders" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'tenders' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
+                <i data-lucide="briefcase" class="w-5 h-5"></i>
+                <span>Aanbestedingen</span>
+            </a>
             <a href="/profile" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'profile' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
                 <i data-lucide="building" class="w-5 h-5"></i>
                 <span>Bedrijfsprofiel</span>
             </a>
             <a href="/digital-id" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'digital-id' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
                 <i data-lucide="id-card" class="w-5 h-5"></i>
-                <span>Digital ID</span>
+                <span>Digitale ID</span>
             </a>
             <a href="/upgrade" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'upgrade' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
                 <i data-lucide="sparkles" class="w-5 h-5"></i>
@@ -177,5 +185,6 @@
         mobileBtn?.addEventListener('click', () => toggleMobileMenu(true));
         mobileOverlay?.addEventListener('click', () => toggleMobileMenu(false));
     </script>
+    @yield('scripts')
 </body>
 </html>

@@ -63,8 +63,8 @@
         document.getElementById('user-meta').innerHTML = `
             <div class="status">User ID: ${user.id}</div>
             <div class="status">UUID: ${user.uuid || '—'}</div>
-            <div class="status">Created at: ${user.created_at || '—'}</div>
-            <div class="status">Updated at: ${user.updated_at || '—'}</div>
+            <div class="status">Created at: ${AdminApp.formatDateTime(user.created_at)}</div>
+            <div class="status">Updated at: ${AdminApp.formatDateTime(user.updated_at)}</div>
         `;
     }
 

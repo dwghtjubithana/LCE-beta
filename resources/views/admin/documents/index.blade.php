@@ -1,30 +1,30 @@
 @extends('admin.layout')
 
-@section('title', 'Documents')
+@section('title', 'Documenten')
 @php($active = 'documents')
 
 @section('content')
 <div class="page-header">
     <div>
-        <h2>Documents</h2>
-        <p>Monitor uploaded documents and processing status.</p>
+        <h2>Documenten</h2>
+        <p>Monitor uploads en verwerkingsstatus.</p>
     </div>
 </div>
 
 <div class="card">
     <div class="filters">
-        <input class="input" id="filter-search" placeholder="Search filename or category">
+        <input class="input" id="filter-search" placeholder="Zoek op bestandsnaam of categorie">
         <select id="filter-status">
-            <option value="">All statuses</option>
-            <option value="PROCESSING">Processing</option>
-            <option value="VALID">Valid</option>
-            <option value="INVALID">Invalid</option>
-            <option value="EXPIRED">Expired</option>
-            <option value="EXPIRING_SOON">Expiring Soon</option>
-            <option value="MANUAL_REVIEW">Manual Review</option>
+            <option value="">Alle statussen</option>
+            <option value="PROCESSING">In verwerking</option>
+            <option value="VALID">Goedgekeurd</option>
+            <option value="INVALID">Afgewezen</option>
+            <option value="EXPIRED">Verlopen</option>
+            <option value="EXPIRING_SOON">Bijna verlopen</option>
+            <option value="MANUAL_REVIEW">Handmatige controle</option>
         </select>
         <select id="filter-category">
-            <option value="">All categories</option>
+            <option value="">Alle categorieen</option>
             <option value="KKF Uittreksel">KKF Uittreksel</option>
             <option value="Vergunning">Vergunning</option>
             <option value="Belastingverklaring">Belastingverklaring</option>
@@ -37,7 +37,7 @@
         </select>
     </div>
     <div class="actions" style="margin-top:12px;">
-        <button class="btn" id="btn-refresh">Apply filters</button>
+        <button class="btn" id="btn-refresh">Filters toepassen</button>
     </div>
 </div>
 
@@ -61,31 +61,44 @@
 
     function renderTable(rows) {
         if (!rows.length) {
-            document.getElementById('documents-table').innerHTML = '<div class="status">No documents found.</div>';
+            document.getElementById('documents-table').innerHTML = '<div class="status">Geen documenten gevonden.</div>';
             return;
         }
-        const body = rows.map(doc => `
+        const body = rows.map(doc => {
+            const status = (doc.status || '').toUpperCase();
+            const statusLabel = status === 'VALID' ? 'Goedgekeurd'
+                : status === 'INVALID' ? 'Afgewezen'
+                : status === 'MANUAL_REVIEW' ? 'Handmatige controle'
+                : status === 'PROCESSING' ? 'In verwerking'
+                : status === 'EXPIRING_SOON' ? 'Bijna verlopen'
+                : status === 'EXPIRED' ? 'Verlopen'
+                : (doc.status || 'Onbekend');
+            const statusClass = status === 'VALID' ? 'badge-success'
+                : status === 'INVALID' ? 'badge-danger'
+                : status === 'MANUAL_REVIEW' ? 'badge-warn'
+                : 'badge';
+            return `
             <tr>
                 <td>${doc.id}</td>
                 <td>${doc.original_filename || '-'}</td>
                 <td>${doc.category_selected || '-'}</td>
-                <td>${doc.status || '-'}</td>
+                <td><span class="badge ${statusClass}">${statusLabel}</span></td>
                 <td>${doc.company_id || '-'}</td>
                 <td class="actions">
-                    <a href="/admin/documents/${doc.id}" class="btn secondary">View</a>
+                    <a href="/admin/documents/${doc.id}" class="btn secondary">Bekijk</a>
                 </td>
             </tr>
-        `).join('');
+        `}).join('');
         document.getElementById('documents-table').innerHTML = `
             <table class="table">
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Filename</th>
-                        <th>Category</th>
+                        <th>Bestandsnaam</th>
+                        <th>Categorie</th>
                         <th>Status</th>
-                        <th>Company</th>
-                        <th>Actions</th>
+                        <th>Bedrijf</th>
+                        <th>Acties</th>
                     </tr>
                 </thead>
                 <tbody>${body}</tbody>
@@ -108,7 +121,7 @@
         const res = await AdminApp.api(`/api/admin/documents?${params.toString()}`);
         const data = await res.json();
         if (!res.ok) {
-            document.getElementById('documents-table').innerHTML = `<div class="status">${data.message || 'Failed to load documents.'}</div>`;
+            document.getElementById('documents-table').innerHTML = `<div class="status">${data.message || 'Documenten laden mislukt.'}</div>`;
             return;
         }
         renderTable(data.documents || []);

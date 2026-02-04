@@ -1,5 +1,4 @@
 <IfModule mod_rewrite.c>
-    SetEnv GEMINI_API_KEY "AIzaSyDPEl2jXzWmO1iv9cQHm7qH5AJyiO1XCy8"
     RewriteEngine On
     RewriteBase /
 

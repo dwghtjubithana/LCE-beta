@@ -9,9 +9,11 @@ use App\Http\Requests\ConfirmDocumentRequest;
 use App\Jobs\ProcessDocument;
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\DocumentFile;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -27,6 +29,12 @@ class DocumentController extends Controller
                 'message' => 'Upgrade required to run AI analysis.',
             ], 403);
         }
+        if (!$this->ensureStorageReady()) {
+            return response()->json([
+                'code' => 'STORAGE_NOT_WRITABLE',
+                'message' => 'Storage path is not writable. Please fix permissions for storage/app/uploads/secure.',
+            ], 500);
+        }
         $company = $this->resolveCompany($user, $request->input('company_id'));
         if (!$company) {
             return response()->json([
@@ -35,26 +43,76 @@ class DocumentController extends Controller
             ], 404);
         }
 
-        $file = $request->file('file');
-        if (!$file || !$file->isValid()) {
+        $category = (string) $request->input('category_selected');
+        $isIdCategory = $category === 'ID Bewijs';
+        $idSubtype = (string) $request->input('id_subtype', '');
+        $frontFile = $request->file('front_file');
+        $backFile = $request->file('back_file');
+        $singleFile = $request->file('file');
+        $primaryFile = $frontFile ?: $singleFile;
+
+        if ($isIdCategory && !in_array($idSubtype, ['paspoort', 'id_kaart', 'rijbewijs'], true)) {
+            return response()->json([
+                'code' => 'VALIDATION_ERROR',
+                'message' => 'Kies een subtype voor ID bewijs (paspoort, id-kaart of rijbewijs).',
+            ], 422);
+        }
+
+        if (!$primaryFile || !$primaryFile->isValid()) {
             return response()->json([
                 'code' => 'INVALID_FILE',
                 'message' => 'Uploaded file is not valid.',
             ], 422);
         }
 
-        $this->virusScanStub($file->getClientOriginalName());
+        if ($isIdCategory && in_array($idSubtype, ['id_kaart', 'rijbewijs'], true) && (!$backFile || !$backFile->isValid())) {
+            return response()->json([
+                'code' => 'VALIDATION_ERROR',
+                'message' => 'Voor ID-kaart en rijbewijs is een achterzijde verplicht.',
+            ], 422);
+        }
 
-        $ocrConfidence = $request->input('ocr_confidence');
-        if ($ocrConfidence !== null && (float) $ocrConfidence < 40.0) {
+        $this->virusScanStub($primaryFile->getClientOriginalName());
+        if ($backFile && $backFile->isValid()) {
+            $this->virusScanStub($backFile->getClientOriginalName());
+        }
+
+        $ocrConfidenceFront = $request->input('ocr_confidence_front', $request->input('ocr_confidence'));
+        $ocrConfidenceBack = $request->input('ocr_confidence_back');
+        if ($ocrConfidenceFront !== null && (float) $ocrConfidenceFront < 40.0) {
             return response()->json([
                 'code' => 'LOW_OCR_CONFIDENCE',
                 'message' => 'Photo too dark or unreadable. Please upload a clearer file.',
             ], 422);
         }
+        if ($ocrConfidenceBack !== null && (float) $ocrConfidenceBack < 40.0) {
+            return response()->json([
+                'code' => 'LOW_OCR_CONFIDENCE',
+                'message' => 'Achterzijde is te donker of onleesbaar. Upload een scherpere foto.',
+            ], 422);
+        }
 
-        $quarantinePath = $file->store('uploads/quarantine');
-        $hash = hash_file('sha256', $file->getRealPath() ?: storage_path('app/' . $quarantinePath));
+        $frontStored = $this->storeSecureFile($primaryFile);
+        if (!$frontStored) {
+            return response()->json([
+                'code' => 'STORE_FAILED',
+                'message' => 'Could not store the uploaded file. Please try again.',
+            ], 500);
+        }
+        $backStored = null;
+        if ($backFile && $backFile->isValid()) {
+            $backStored = $this->storeSecureFile($backFile);
+            if (!$backStored) {
+                return response()->json([
+                    'code' => 'STORE_FAILED',
+                    'message' => 'Could not store the back side file. Please try again.',
+                ], 500);
+            }
+        }
+
+        $hash = $backStored
+            ? hash('sha256', ($frontStored['hash'] ?? '') . '|' . ($backStored['hash'] ?? '') . '|' . $idSubtype)
+            : ($frontStored['hash'] ?? null);
 
         $existing = Document::where('company_id', $company->id)
             ->where('file_hash_sha256', $hash)
@@ -69,25 +127,66 @@ class DocumentController extends Controller
             ], 409);
         }
 
-        $securePath = 'uploads/secure/' . Str::uuid() . '_' . $file->getClientOriginalName();
-        Storage::disk('local')->move($quarantinePath, $securePath);
-
         $document = Document::create([
             'uuid' => (string) Str::uuid(),
             'company_id' => $company->id,
-            'category_selected' => $request->input('category_selected'),
+            'category_selected' => $category,
             'status' => 'PROCESSING',
-            'source_file_url' => $securePath,
+            'source_file_url' => $frontStored['path'],
             'file_hash_sha256' => $hash,
-            'mime_type' => $file->getClientMimeType(),
-            'original_filename' => $file->getClientOriginalName(),
-            'file_size' => $file->getSize(),
-            'ocr_confidence' => $ocrConfidence,
+            'mime_type' => $frontStored['mime_type'],
+            'original_filename' => $frontStored['original_filename'],
+            'file_size' => $frontStored['file_size'],
+            'ocr_confidence' => $ocrConfidenceFront,
             'extracted_data' => [
-                'ocr_text' => $request->input('ocr_text'),
-                'ocr_confidence' => $ocrConfidence,
+                'id_subtype' => $isIdCategory ? $idSubtype : null,
+                'ocr_text' => $request->input('ocr_text_front', $request->input('ocr_text')),
+                'ocr_confidence' => $ocrConfidenceFront,
+                'ocr_text_front' => $request->input('ocr_text_front', $request->input('ocr_text')),
+                'ocr_confidence_front' => $ocrConfidenceFront,
+                'ocr_text_back' => $request->input('ocr_text_back'),
+                'ocr_confidence_back' => $ocrConfidenceBack,
+                'uploaded_files' => array_values(array_filter([
+                    [
+                        'side' => 'FRONT',
+                        'path' => $frontStored['path'],
+                        'filename' => $frontStored['original_filename'],
+                        'mime_type' => $frontStored['mime_type'],
+                        'file_size' => $frontStored['file_size'],
+                    ],
+                    $backStored ? [
+                        'side' => 'BACK',
+                        'path' => $backStored['path'],
+                        'filename' => $backStored['original_filename'],
+                        'mime_type' => $backStored['mime_type'],
+                        'file_size' => $backStored['file_size'],
+                    ] : null,
+                ])),
             ],
         ]);
+
+        if ($isIdCategory || $backStored) {
+            DocumentFile::create([
+                'document_id' => $document->id,
+                'side' => 'FRONT',
+                'file_path' => $frontStored['path'],
+                'original_filename' => $frontStored['original_filename'],
+                'mime_type' => $frontStored['mime_type'],
+                'file_size' => $frontStored['file_size'],
+                'file_hash_sha256' => $frontStored['hash'],
+            ]);
+            if ($backStored) {
+                DocumentFile::create([
+                    'document_id' => $document->id,
+                    'side' => 'BACK',
+                    'file_path' => $backStored['path'],
+                    'original_filename' => $backStored['original_filename'],
+                    'mime_type' => $backStored['mime_type'],
+                    'file_size' => $backStored['file_size'],
+                    'file_hash_sha256' => $backStored['hash'],
+                ]);
+            }
+        }
 
         ProcessDocument::dispatch($document->id);
         $audit->record($user, 'document.upload', 'document', $document->id, [
@@ -109,6 +208,12 @@ class DocumentController extends Controller
                 'code' => 'PLAN_RESTRICTED',
                 'message' => 'Upgrade required to run AI analysis.',
             ], 403);
+        }
+        if (!$this->ensureStorageReady()) {
+            return response()->json([
+                'code' => 'STORAGE_NOT_WRITABLE',
+                'message' => 'Storage path is not writable. Please fix permissions for storage/app/uploads/secure.',
+            ], 500);
         }
 
         $company = $this->resolveCompany($user, $request->input('company_id'));
@@ -150,8 +255,20 @@ class DocumentController extends Controller
                 continue;
             }
 
-            $securePath = 'uploads/secure/' . Str::uuid() . '_' . $file->getClientOriginalName();
+            $secureFilename = Str::uuid() . '_' . $file->getClientOriginalName();
+            $securePath = 'uploads/secure/' . $secureFilename;
             Storage::disk('local')->move($quarantinePath, $securePath);
+            if (!Storage::disk('local')->exists($securePath)) {
+                Storage::disk('local')->putFileAs('uploads/secure', $file, $secureFilename);
+            }
+            if (!Storage::disk('local')->exists($securePath)) {
+                $results[] = [
+                    'filename' => $file->getClientOriginalName(),
+                    'status' => 'error',
+                    'code' => 'STORE_FAILED',
+                ];
+                continue;
+            }
 
             $document = Document::create([
                 'uuid' => (string) Str::uuid(),
@@ -348,6 +465,50 @@ class DocumentController extends Controller
         ]);
     }
 
+    public function destroy(AuditLogService $audit, int $id): JsonResponse
+    {
+        $user = $this->authUser();
+        $document = Document::query()
+            ->where('id', $id)
+            ->whereHas('company', function ($query) use ($user) {
+                $query->where('owner_user_id', $user->id);
+            })
+            ->first();
+
+        if (!$document) {
+            return response()->json([
+                'code' => 'NOT_FOUND',
+                'message' => 'Document not found.',
+            ], 404);
+        }
+
+        if ($document->source_file_url) {
+            Storage::disk('local')->delete($document->source_file_url);
+        }
+        foreach ($document->files as $file) {
+            if ($file->file_path && $file->file_path !== $document->source_file_url) {
+                Storage::disk('local')->delete($file->file_path);
+            }
+        }
+        if ($document->summary_file_path) {
+            Storage::disk('local')->delete($document->summary_file_path);
+        }
+
+        $documentId = $document->id;
+        $companyId = $document->company_id;
+        $document->files()->delete();
+        $document->delete();
+
+        $audit->record($user, 'document.delete', 'document', $documentId, [
+            'company_id' => $companyId,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Document deleted.',
+        ]);
+    }
+
     private function resolveCompany(User $user, ?int $companyId): ?Company
     {
         $query = Company::where('owner_user_id', $user->id);
@@ -415,5 +576,39 @@ class DocumentController extends Controller
     private function virusScanStub(string $filename): void
     {
         Log::info('Virus scan skipped (stub).', ['filename' => $filename]);
+    }
+
+    private function ensureStorageReady(): bool
+    {
+        $disk = Storage::disk('local');
+        $path = $disk->path('uploads/secure');
+        if (!is_dir($path)) {
+            @mkdir($path, 0775, true);
+        }
+        return is_dir($path) && is_writable($path);
+    }
+
+    private function storeSecureFile(UploadedFile $file): ?array
+    {
+        $quarantinePath = $file->store('uploads/quarantine');
+        $hash = hash_file('sha256', $file->getRealPath() ?: storage_path('app/' . $quarantinePath));
+
+        $secureFilename = Str::uuid() . '_' . $file->getClientOriginalName();
+        $securePath = 'uploads/secure/' . $secureFilename;
+        Storage::disk('local')->move($quarantinePath, $securePath);
+        if (!Storage::disk('local')->exists($securePath)) {
+            Storage::disk('local')->putFileAs('uploads/secure', $file, $secureFilename);
+        }
+        if (!Storage::disk('local')->exists($securePath)) {
+            return null;
+        }
+
+        return [
+            'path' => $securePath,
+            'hash' => $hash,
+            'mime_type' => $file->getClientMimeType(),
+            'original_filename' => $file->getClientOriginalName(),
+            'file_size' => $file->getSize(),
+        ];
     }
 }

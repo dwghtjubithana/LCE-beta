@@ -47,7 +47,7 @@
                 <td>${p.user_id || '-'}</td>
                 <td>${p.company_id || '-'}</td>
                 <td>${p.status || '-'}</td>
-                <td>${p.submitted_at || '-'}</td>
+                <td>${AdminApp.formatDateTime(p.submitted_at)}</td>
                 <td class="actions">
                     <button class="btn secondary" data-action="approve" data-id="${p.id}">Approve</button>
                     <button class="btn secondary" data-action="reject" data-id="${p.id}">Reject</button>

@@ -11,14 +11,20 @@ class AdminGeminiController extends Controller
     public function health(GeminiService $gemini, AuditLogService $audit): JsonResponse
     {
         $status = 'ok';
-        $message = 'Gemini key detected and request succeeded.';
+        $message = 'Gemini-sleutel gedetecteerd en test geslaagd.';
 
-        if (!env('GEMINI_API_KEY')) {
+        if (!\App\Models\AppSetting::getValue('gemini_api_key')) {
             $status = 'error';
-            $message = 'GEMINI_API_KEY is not set.';
+            $message = 'Gemini API-sleutel ontbreekt in AI-instellingen.';
         } else {
             try {
-                $gemini->validateDocument('Test', 'ping', '', 'application/pdf');
+                $result = $gemini->ping();
+                $resultStatus = strtoupper((string) ($result['status'] ?? ''));
+                $note = (string) ($result['compliance_notitie'] ?? $result['message'] ?? '');
+                if ($resultStatus !== 'OK') {
+                    $status = 'error';
+                    $message = $note ?: 'Gemini gaf een fout terug.';
+                }
             } catch (\Throwable $e) {
                 $status = 'error';
                 $message = $e->getMessage();

@@ -26,6 +26,10 @@ Route::get('/upgrade', function () {
     return view('user.upgrade', ['active' => 'upgrade']);
 });
 
+Route::get('/user/tenders', function () {
+    return view('user.tenders', ['active' => 'tenders']);
+});
+
 Route::get('/tenders', function () {
     return view('tenders.public');
 });
@@ -112,5 +116,8 @@ Route::middleware('admin.basic')->group(function () {
     });
     Route::get('/admin/system', function () {
         return view('admin.system.index', ['active' => 'system']);
+    });
+    Route::get('/admin/ai-settings', function () {
+        return view('admin.ai-settings', ['active' => 'ai-settings']);
     });
 });

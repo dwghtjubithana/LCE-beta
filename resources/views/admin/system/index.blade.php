@@ -1,28 +1,31 @@
 @extends('admin.layout')
 
-@section('title', 'System Health')
+@section('title', 'Systeemstatus')
 @php($active = 'system')
 
 @section('content')
 <div class="page-header">
     <div>
-        <h2>System Health</h2>
-        <p>Environment status, metrics, and integrations.</p>
+        <h2>Systeemstatus & AI</h2>
+        <p>Bekijk status, metrics en beheer AI‑instellingen.</p>
     </div>
 </div>
 
 <div class="grid">
     <div class="card">
-        <h3 style="margin-top:0;">Health</h3>
+        <h3 style="margin-top:0;">Status</h3>
+        <p class="status">API‑status en kernservices.</p>
         <div id="health" class="status">Loading...</div>
     </div>
     <div class="card">
-        <h3 style="margin-top:0;">Metrics</h3>
+        <h3 style="margin-top:0;">Statistieken</h3>
+        <p class="status">Overzicht van documenten en gebruikers.</p>
         <div id="metrics" class="status">Loading...</div>
     </div>
     <div class="card">
-        <h3 style="margin-top:0;">Gemini</h3>
-        <div id="gemini" class="status">Loading...</div>
+        <h3 style="margin-top:0;">Gemini-status</h3>
+        <p class="status">Controleer of de AI‑verbinding werkt.</p>
+        <div id="gemini" class="status">Laden...</div>
         <div class="actions" style="margin-top:12px;">
             <button class="btn secondary" id="btn-gemini">Test Gemini</button>
         </div>
@@ -91,22 +94,16 @@
             document.getElementById('gemini').textContent = data.message || 'Failed to test Gemini.';
             return;
         }
-        if (data && typeof data === 'object') {
-            const status = String(data.status || '').toLowerCase();
-            const label = status === 'ok' ? '<span style="color:#16a34a;font-weight:600;">Connected</span>' : '<span style="color:#ef4444;font-weight:600;">Not connected</span>';
-            const summary = {
-                status: status || 'unknown',
-                connection: label,
-                message: data.message || null,
-            };
-            if (summary.message) {
-                renderKeyValue('gemini', summary);
-            } else {
-                renderKeyValue('gemini', data);
-            }
-        } else {
-            document.getElementById('gemini').textContent = 'No response payload.';
-        }
+        const result = data?.result || {};
+        const status = String(result.status || '').toLowerCase();
+        const label = status === 'ok'
+            ? '<span style="color:#16a34a;font-weight:600;">Connected</span>'
+            : '<span style="color:#ef4444;font-weight:600;">Not connected</span>';
+        renderKeyValue('gemini', {
+            status: status || 'unknown',
+            connection: label,
+            message: result.message || null,
+        });
     }
 
     document.getElementById('btn-gemini').addEventListener('click', testGemini);

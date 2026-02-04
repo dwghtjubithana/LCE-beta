@@ -40,4 +40,9 @@ class Document extends Model
     {
         return $this->belongsTo(Company::class);
     }
+
+    public function files()
+    {
+        return $this->hasMany(DocumentFile::class);
+    }
 }
