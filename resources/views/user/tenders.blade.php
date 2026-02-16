@@ -1,6 +1,6 @@
 @extends('user.layout')
 
-@section('title', 'Aanbestedingen | SuriCore')
+@section('title', 'Aanbestedingen | Wapcore')
 @section('page_title', 'Aanbestedingen')
 
 @section('content')

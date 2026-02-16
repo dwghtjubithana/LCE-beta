@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'SuriCore Dashboard')</title>
+    <title>@yield('title', 'Wapcore LCE Dashboard')</title>
 
     <script src="https://cdn.tailwindcss.com" defer></script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
@@ -19,7 +19,7 @@
                 <div class="bg-blue-600 p-3 rounded-xl shadow-lg mb-4">
                     <i data-lucide="shield-check" class="text-white w-8 h-8"></i>
                 </div>
-                <h2 class="text-2xl font-bold text-slate-800">SuriCore Login</h2>
+                <h2 class="text-2xl font-bold text-slate-800">Wapcore Login</h2>
                 <p class="text-slate-500 text-sm mt-1">Log in om toegang te krijgen tot de Local Content Engine</p>
             </div>
             <form id="loginForm" class="space-y-4">
@@ -44,7 +44,7 @@
         <button id="mobileMenuBtn" class="p-2 rounded-lg border border-slate-200 text-slate-700">
             <i data-lucide="menu" class="w-5 h-5"></i>
         </button>
-        <span class="font-semibold text-slate-800">SuriCore</span>
+        <span class="font-semibold text-slate-800">Wapcore</span>
         <div class="w-9"></div>
     </header>
 
@@ -56,7 +56,7 @@
                 <div class="bg-blue-600 p-1.5 rounded-lg">
                     <i data-lucide="shield-check" class="text-white w-5 h-5"></i>
                 </div>
-                SuriCore
+                Wapcore
             </h1>
             <p class="text-[10px] text-slate-400 mt-2 ml-1 uppercase tracking-widest font-semibold">Local Content Engine</p>
         </div>
@@ -100,7 +100,7 @@
                 <div class="bg-blue-600 p-1.5 rounded-lg">
                     <i data-lucide="shield-check" class="text-white w-5 h-5"></i>
                 </div>
-                SuriCore
+                Wapcore
             </h1>
             <p class="text-[10px] text-slate-400 mt-2 ml-1 uppercase tracking-widest font-semibold">Local Content Engine</p>
         </div>

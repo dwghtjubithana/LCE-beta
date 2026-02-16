@@ -1,6 +1,162 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-body { font-family: 'Inter', sans-serif; }
+:root {
+  --wap-turquoise: #0ea5a4;
+  --wap-turquoise-dark: #0c8e8d;
+  --wap-soft-bg: #f4f7f9;
+  --wap-sidebar: #1e293b;
+  --wap-card: #ffffff;
+  --wap-text: #334155;
+  --wap-muted: #64748b;
+  --wap-border: #e2e8f0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--wap-soft-bg);
+  color: var(--wap-text);
+}
+
+/* Align existing Tailwind utility usage with Wapcore branding */
+.bg-slate-50 {
+  background-color: var(--wap-soft-bg) !important;
+}
+
+.bg-slate-50\/50 {
+  background-color: rgba(244, 247, 249, 0.62) !important;
+}
+
+.bg-white {
+  background-color: var(--wap-card) !important;
+}
+
+.bg-slate-900 {
+  background-color: var(--wap-sidebar) !important;
+}
+
+.bg-slate-900\/80 {
+  background-color: rgba(30, 41, 59, 0.8) !important;
+}
+
+.bg-slate-900\/60 {
+  background-color: rgba(30, 41, 59, 0.62) !important;
+}
+
+.bg-slate-950\/30 {
+  background-color: rgba(15, 23, 42, 0.3) !important;
+}
+
+.bg-slate-800:hover {
+  background-color: #0f172a !important;
+}
+
+.bg-slate-800 {
+  background-color: #0f172a !important;
+}
+
+.bg-blue-600 {
+  background-color: var(--wap-turquoise) !important;
+}
+
+.bg-blue-600\/10 {
+  background-color: rgba(14, 165, 164, 0.12) !important;
+}
+
+.border-blue-600\/20 {
+  border-color: rgba(14, 165, 164, 0.25) !important;
+}
+
+.text-blue-400,
+.text-blue-600 {
+  color: var(--wap-turquoise) !important;
+}
+
+.hover\:text-blue-700:hover,
+.text-blue-700 {
+  color: var(--wap-turquoise-dark) !important;
+}
+
+.hover\:bg-blue-700:hover {
+  background-color: var(--wap-turquoise-dark) !important;
+}
+
+.bg-indigo-600 {
+  background-color: var(--wap-turquoise-dark) !important;
+}
+
+.hover\:bg-indigo-700:hover {
+  background-color: #0b7a79 !important;
+}
+
+.focus\:ring-blue-500:focus {
+  --tw-ring-color: rgba(14, 165, 164, 0.35) !important;
+}
+
+.focus\:border-blue-500:focus {
+  border-color: rgba(14, 165, 164, 0.7) !important;
+}
+
+.from-blue-500 {
+  --tw-gradient-from: var(--wap-turquoise) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(14, 165, 164, 0)) !important;
+}
+
+.to-purple-600 {
+  --tw-gradient-to: #0f766e !important;
+}
+
+.shadow-blue-200 {
+  --tw-shadow-color: rgba(14, 165, 164, 0.25) !important;
+}
+
+.bg-blue-50 {
+  background-color: #f0fdfa !important;
+}
+
+.text-slate-900,
+.text-slate-800 {
+  color: #0f172a !important;
+}
+
+.text-slate-700 {
+  color: var(--wap-text) !important;
+}
+
+.text-slate-600,
+.text-slate-500,
+.text-slate-400 {
+  color: var(--wap-muted) !important;
+}
+
+.border-slate-100,
+.border-slate-200 {
+  border-color: var(--wap-border) !important;
+}
+
+.border-slate-800 {
+  border-color: rgba(100, 116, 139, 0.28) !important;
+}
+
+.bg-slate-100 {
+  background-color: #eef2f7 !important;
+}
+
+.hover\:bg-slate-200:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.hover\:text-red-400:hover {
+  color: #ef4444 !important;
+}
+
+.border-blue-500,
+.focus\:border-blue-500:focus {
+  border-color: rgba(14, 165, 164, 0.7) !important;
+}
+
+.card-tint {
+  border-top: 1px solid rgba(14, 165, 164, 0.5) !important;
+}
 
 .gauge-ring {
   transition: stroke-dashoffset 1s ease-out, stroke 0.3s ease;

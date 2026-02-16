@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuriCore Digitale ID</title>
+    <title>Wapcore Digitale ID</title>
     <link rel="stylesheet" href="/public/css/public-profile.css">
     <script src="https://unpkg.com/lucide@latest" defer></script>
     <script src="/public/js/public-profile.js" defer></script>
@@ -14,7 +14,7 @@
             <div class="profile__brand">
                 <span class="brand__mark">SC</span>
                 <div>
-                    <p class="brand__name">SuriCore</p>
+                    <p class="brand__name">Wapcore</p>
                     <p class="brand__tag">Digitale ID</p>
                 </div>
             </div>

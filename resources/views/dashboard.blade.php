@@ -8,7 +8,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>SuriCore - Local Content Engine Dashboard</title>
+    <title>Wapcore - Local Content Engine Dashboard</title>
 
     <script src="https://cdn.tailwindcss.com" defer></script>
 
@@ -38,7 +38,7 @@
 
                 </div>
 
-                <h2 class="text-2xl font-bold text-slate-800">SuriCore Login</h2>
+                <h2 class="text-2xl font-bold text-slate-800">Wapcore Login</h2>
 
                 <p class="text-slate-500 text-sm mt-1">Log in om toegang te krijgen tot de Local Content Engine</p>
 
@@ -92,7 +92,7 @@
 
                 </div>
 
-                SuriCore
+                Wapcore
 
             </h1>
 

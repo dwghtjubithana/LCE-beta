@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --ink: #0f172a;
+  --ink: #334155;
   --muted: #64748b;
-  --accent: #0f766e;
-  --bg: #f5f7fb;
+  --accent: #0ea5a4;
+  --bg: #f4f7f9;
   --card: #ffffff;
 }
 
@@ -12,13 +12,14 @@
 
 body {
   margin: 0;
-  font-family: 'Work Sans', sans-serif;
-  background: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 50%, #eef2ff 100%);
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 50%, #f1f5f9 100%);
   color: var(--ink);
 }
 
 h1, h2 {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.02em;
 }
 
 .profile {
@@ -45,8 +46,8 @@ h1, h2 {
   background: var(--accent);
   color: #fff;
   padding: 10px 14px;
-  border-radius: 14px;
-  font-weight: 700;
+  border-radius: 10px;
+  font-weight: 800;
   letter-spacing: 0.1em;
 }
 
@@ -63,7 +64,7 @@ h1, h2 {
 
 .btn {
   border: none;
-  border-radius: 999px;
+  border-radius: 12px;
   padding: 10px 16px;
   font-weight: 600;
   display: inline-flex;
@@ -81,12 +82,13 @@ h1, h2 {
 .profile__card {
   margin-top: 32px;
   background: var(--card);
-  border-radius: 28px;
+  border-radius: 16px;
   padding: 24px;
   display: grid;
   gap: 20px;
   grid-template-columns: 120px 1fr;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
 }
 
 .profile__avatar {

@@ -1,6 +1,6 @@
 @extends('user.layout')
 
-@section('title', 'SuriCore Dashboard')
+@section('title', 'Wapcore Dashboard')
 @php($active = 'dashboard')
 @section('page_title', 'Bedrijfscompliance')
 

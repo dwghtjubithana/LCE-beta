@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tender Details | SuriCore</title>
+    <title>Tender Details | Wapcore</title>
     <link rel="stylesheet" href="/public/css/tenders.css">
     <script src="https://unpkg.com/lucide@latest" defer></script>
     <script src="/public/js/tender-detail.js" defer></script>
@@ -15,7 +15,7 @@
                 <div class="brand">
                     <span class="brand__mark">SC</span>
                     <div>
-                        <p class="brand__name">SuriCore</p>
+                        <p class="brand__name">Wapcore</p>
                         <p class="brand__tag">Tender Radar • Details</p>
                     </div>
                 </div>

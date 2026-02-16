@@ -6,16 +6,16 @@
     <title>@yield('title', 'LCE Admin')</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --ink: #0f172a;
+            --ink: #334155;
             --muted: #64748b;
             --line: #e2e8f0;
             --card: #ffffff;
-            --bg: #f6f7fb;
-            --accent: #1d4ed8;
-            --accent-2: #0ea5e9;
+            --bg: #f4f7f9;
+            --accent: #0ea5a4;
+            --accent-2: #0c8e8d;
             --success: #16a34a;
             --warning: #f59e0b;
             --danger: #ef4444;
@@ -23,7 +23,7 @@
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            font-family: "Manrope", system-ui, sans-serif;
+            font-family: "Inter", system-ui, sans-serif;
             color: var(--ink);
             background: var(--bg);
         }
@@ -34,7 +34,7 @@
             min-height: 100vh;
         }
         .sidebar {
-            background: #0b1220;
+            background: #1e293b;
             color: #e2e8f0;
             padding: 24px 18px;
             display: flex;
@@ -51,6 +51,10 @@
             margin: 0;
             letter-spacing: 0.03em;
         }
+        .brand h1 .accent {
+            color: var(--accent);
+            font-weight: 800;
+        }
         .brand span {
             font-size: 12px;
             color: #94a3b8;
@@ -62,12 +66,13 @@
         .nav a {
             padding: 10px 12px;
             border-radius: 10px;
-            color: #cbd5f5;
+            color: #cbd5e1;
             font-weight: 600;
         }
         .nav a.active {
-            background: #1e293b;
-            color: #fff;
+            background: rgba(14, 165, 164, 0.15);
+            color: var(--accent);
+            border-right: 3px solid var(--accent);
         }
         .nav h3 {
             margin: 16px 0 6px;
@@ -142,9 +147,9 @@
         .pill {
             padding: 6px 10px;
             border-radius: 999px;
-            background: #eef2ff;
+            background: #e6fffa;
             font-size: 12px;
-            color: #1e40af;
+            color: #0f766e;
             font-weight: 600;
         }
         .content {
@@ -234,8 +239,8 @@
             border-radius: 999px;
             font-size: 12px;
             font-weight: 600;
-            background: #eef2ff;
-            color: #1e40af;
+            background: #e6fffa;
+            color: #0f766e;
         }
         .badge-success { background: #dcfce7; color: #166534; }
         .badge-warn { background: #fef9c3; color: #854d0e; }
@@ -264,8 +269,8 @@
     <div class="app">
         <aside class="sidebar">
             <div class="brand">
-                <h1>LCE Admin</h1>
-                <span>Operations Console</span>
+                <h1>Wap<span class="accent">core</span> Admin</h1>
+                <span>Local Content Engine</span>
             </div>
             <nav class="nav">
                 <a href="/admin" class="{{ ($active ?? '') === 'dashboard' ? 'active' : '' }}">Dashboard</a>
