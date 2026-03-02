@@ -6,6 +6,7 @@ use App\Models\PaymentProof;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class AdminPaymentProofController extends Controller
 {
@@ -22,7 +23,7 @@ class AdminPaymentProofController extends Controller
         ]);
     }
 
-    public function approve(AuditLogService $audit, int $id): JsonResponse
+    public function approve(Request $request, AuditLogService $audit, int $id): JsonResponse
     {
         $admin = $this->authUser();
         $proof = PaymentProof::find($id);
@@ -33,20 +34,30 @@ class AdminPaymentProofController extends Controller
             ], 404);
         }
 
+        $targetLevel = strtoupper((string) $request->input('target_level', 'BUSINESS'));
+        if (!in_array($targetLevel, ['BUSINESS', 'ENTERPRISE'], true)) {
+            return response()->json([
+                'code' => 'VALIDATION_ERROR',
+                'message' => 'Target level must be BUSINESS or ENTERPRISE.',
+            ], 422);
+        }
+
         $proof->status = 'APPROVED';
+        $proof->target_level = $targetLevel;
         $proof->reviewed_by = $admin->id;
         $proof->reviewed_at = now();
         $proof->save();
 
         $user = User::find($proof->user_id);
         if ($user) {
-            $user->plan = 'PRO';
+            $user->plan = $targetLevel;
             $user->plan_status = 'ACTIVE';
             $user->save();
         }
 
         $audit->record($admin, 'payment_proof.approve', 'payment_proof', $proof->id, [
             'user_id' => $proof->user_id,
+            'target_level' => $targetLevel,
         ]);
 
         return response()->json([

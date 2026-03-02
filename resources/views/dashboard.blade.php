@@ -10,7 +10,7 @@
 
     <title>Wapcore - Local Content Engine Dashboard</title>
 
-    <script src="https://cdn.tailwindcss.com" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://unpkg.com/lucide@latest" defer></script>
 
@@ -32,11 +32,7 @@
 
             <div class="flex flex-col items-center mb-6">
 
-                <div class="bg-blue-600 p-3 rounded-xl shadow-lg mb-4">
-
-                    <i data-lucide="shield-check" class="text-white w-8 h-8"></i>
-
-                </div>
+                <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-20 h-auto object-contain mb-4">
 
                 <h2 class="text-2xl font-bold text-slate-800">Wapcore Login</h2>
 
@@ -84,19 +80,7 @@
 
         <div class="p-6">
 
-            <h1 class="text-xl font-bold flex items-center gap-2 tracking-tight">
-
-                <div class="bg-blue-600 p-1.5 rounded-lg">
-
-                    <i data-lucide="shield-check" class="text-white w-5 h-5"></i>
-
-                </div>
-
-                Wapcore
-
-            </h1>
-
-            <p class="text-[10px] text-slate-400 mt-2 ml-1 uppercase tracking-widest font-semibold">Local Content Engine</p>
+            <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-36 h-auto object-contain">
 
         </div>
 
@@ -182,7 +166,7 @@
 
         <!-- DASHBOARD CONTENT -->
 
-        <div class="flex-1 overflow-y-auto p-8 scroll-smooth" id="dashboardContent" style="opacity: 0.3; pointer-events: none;">
+        <div class="flex-1 overflow-y-auto p-8 scroll-smooth" id="dashboardContent">
 
             <div class="max-w-7xl mx-auto space-y-8">
 

@@ -7,16 +7,16 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ProfilePdfService
 {
-    public function download(Company $company)
+    public function download(Company $company, bool $withWatermark = true)
     {
-        $html = $this->buildHtml($company);
+        $html = $this->buildHtml($company, $withWatermark);
         $pdf = Pdf::loadHTML($html)->setPaper('a4');
 
         $filename = 'company_profile_' . $company->id . '.pdf';
         return $pdf->download($filename);
     }
 
-    private function buildHtml(Company $company): string
+    private function buildHtml(Company $company, bool $withWatermark): string
     {
         $contact = $company->contact ?? [];
         $contactLines = [];
@@ -31,6 +31,8 @@ class ProfilePdfService
         }
 
         $contactHtml = $contactLines ? implode('<br>', $contactLines) : '—';
+
+        $watermarkHtml = $withWatermark ? '<div class="watermark">Powered by SuriCore</div>' : '';
 
         return '<!doctype html>
 <html lang="en">
@@ -59,8 +61,7 @@ class ProfilePdfService
     <div class="label">Contact</div>
     <div>' . $contactHtml . '</div>
   </div>
-
-  <div class="watermark">Powered by SuriCore</div>
+  ' . $watermarkHtml . '
 </body>
 </html>';
     }

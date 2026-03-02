@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Wapcore LCE Dashboard')</title>
 
-    <script src="https://cdn.tailwindcss.com" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
     <link rel="stylesheet" href="/public/css/dashboard.css">
     <script src="/public/js/dashboard.js" defer></script>
@@ -16,9 +16,7 @@
     <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm hidden modal-enter">
         <div class="bg-white w-full max-w-md p-8 rounded-2xl shadow-2xl relative">
             <div class="flex flex-col items-center mb-6">
-                <div class="bg-blue-600 p-3 rounded-xl shadow-lg mb-4">
-                    <i data-lucide="shield-check" class="text-white w-8 h-8"></i>
-                </div>
+                <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-20 h-auto object-contain mb-4">
                 <h2 class="text-2xl font-bold text-slate-800">Wapcore Login</h2>
                 <p class="text-slate-500 text-sm mt-1">Log in om toegang te krijgen tot de Local Content Engine</p>
             </div>
@@ -44,7 +42,7 @@
         <button id="mobileMenuBtn" class="p-2 rounded-lg border border-slate-200 text-slate-700">
             <i data-lucide="menu" class="w-5 h-5"></i>
         </button>
-        <span class="font-semibold text-slate-800">Wapcore</span>
+        <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-28 h-auto object-contain">
         <div class="w-9"></div>
     </header>
 
@@ -52,13 +50,7 @@
     <div id="mobileMenuOverlay" class="fixed inset-0 z-40 bg-slate-900/60 hidden md:hidden"></div>
     <aside id="mobileMenu" class="fixed top-0 left-0 bottom-0 w-72 bg-slate-900 text-white z-50 transform -translate-x-full transition-transform md:hidden">
         <div class="p-6">
-            <h1 class="text-xl font-bold flex items-center gap-2 tracking-tight">
-                <div class="bg-blue-600 p-1.5 rounded-lg">
-                    <i data-lucide="shield-check" class="text-white w-5 h-5"></i>
-                </div>
-                Wapcore
-            </h1>
-            <p class="text-[10px] text-slate-400 mt-2 ml-1 uppercase tracking-widest font-semibold">Local Content Engine</p>
+            <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-32 h-auto object-contain">
         </div>
         <nav class="flex-1 mt-2 px-4 space-y-1">
             <a href="/dashboard" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'dashboard' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
@@ -96,13 +88,7 @@
     <!-- SIDEBAR -->
     <aside class="w-64 bg-slate-900 text-white flex-shrink-0 hidden md:flex flex-col h-screen">
         <div class="p-6">
-            <h1 class="text-xl font-bold flex items-center gap-2 tracking-tight">
-                <div class="bg-blue-600 p-1.5 rounded-lg">
-                    <i data-lucide="shield-check" class="text-white w-5 h-5"></i>
-                </div>
-                Wapcore
-            </h1>
-            <p class="text-[10px] text-slate-400 mt-2 ml-1 uppercase tracking-widest font-semibold">Local Content Engine</p>
+            <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-36 h-auto object-contain">
         </div>
         <nav class="flex-1 mt-2 px-4 space-y-1">
             <a href="/dashboard" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'dashboard' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
@@ -157,7 +143,7 @@
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8 scroll-smooth" id="dashboardContent" style="opacity: 0.3; pointer-events: none;">
+        <div class="flex-1 overflow-y-auto p-8 scroll-smooth" id="dashboardContent">
             @yield('content')
         </div>
     </main>

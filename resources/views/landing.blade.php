@@ -47,25 +47,13 @@
             gap: 12px;
         }
         .brand-mark {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            background: var(--wap-sidebar);
-            color: var(--wap-turquoise);
-            display: grid;
-            place-items: center;
-            font-weight: 900;
+            display: block;
+            line-height: 0;
         }
-        .brand-text {
-            margin: 0;
-            font-size: 20px;
-            font-weight: 300;
-            letter-spacing: -0.02em;
-            color: #0f172a;
-        }
-        .brand-text b {
-            font-weight: 900;
-            color: var(--wap-turquoise);
+        .brand-logo {
+            width: 162px;
+            height: auto;
+            display: block;
         }
         .actions {
             display: flex;
@@ -341,6 +329,12 @@
             gap: 12px;
             margin-bottom: 14px;
         }
+        .modal-brand {
+            width: 70px;
+            height: auto;
+            margin-bottom: 10px;
+            display: block;
+        }
         .modal-head h3 {
             margin: 0;
             font-size: 20px;
@@ -427,6 +421,7 @@
             .wrap { padding: 14px 14px 32px; }
             .actions { width: 100%; }
             .actions .btn { flex: 1; }
+            .brand-logo { width: 136px; }
             .hero { padding-top: 24px; }
             .section-block { padding: 20px 16px; }
             .lead-card { padding: 22px 14px; }
@@ -437,8 +432,9 @@
     <div class="wrap">
         <header class="topbar">
             <div class="brand">
-                <div class="brand-mark">W</div>
-                <p class="brand-text">Wap<b>core</b> LCE</p>
+                <div class="brand-mark">
+                    <img class="brand-logo" src="/public/img/logo-lce.png" alt="Wapcore LCE logo">
+                </div>
             </div>
             <div class="actions">
                 <button type="button" class="btn btn-ghost" data-open="login">Inloggen</button>
@@ -558,6 +554,7 @@
         <div class="modal-card">
             <div class="modal-head">
                 <div>
+                    <img class="modal-brand" src="/public/img/logo-lce.png" alt="Wapcore LCE logo">
                     <h3>Inloggen</h3>
                     <p>Toegang tot uw Local Content Engine dashboard.</p>
                 </div>
@@ -582,6 +579,7 @@
         <div class="modal-card">
             <div class="modal-head">
                 <div>
+                    <img class="modal-brand" src="/public/img/logo-lce.png" alt="Wapcore LCE logo">
                     <h3>Registreren</h3>
                     <p>Maak uw account en start direct met uw quick scan.</p>
                 </div>

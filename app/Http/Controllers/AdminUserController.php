@@ -94,7 +94,7 @@ class AdminUserController extends Controller
         $data = $request->validate([
             'app_role' => ['sometimes', 'in:user,admin'],
             'status' => ['sometimes', 'in:ACTIVE,SUSPENDED'],
-            'plan' => ['sometimes', 'in:FREE,PRO,BUSINESS'],
+            'plan' => ['sometimes', 'in:FREE,BUSINESS,ENTERPRISE,PRO'],
             'plan_status' => ['sometimes', 'in:ACTIVE,PENDING_PAYMENT,EXPIRED'],
         ]);
 
@@ -127,7 +127,7 @@ class AdminUserController extends Controller
             'password' => ['required', 'string', 'min:8'],
             'app_role' => ['sometimes', 'in:user,admin'],
             'status' => ['sometimes', 'in:ACTIVE,SUSPENDED'],
-            'plan' => ['sometimes', 'in:FREE,PRO,BUSINESS'],
+            'plan' => ['sometimes', 'in:FREE,BUSINESS,ENTERPRISE,PRO'],
             'plan_status' => ['sometimes', 'in:ACTIVE,PENDING_PAYMENT,EXPIRED'],
         ]);
 

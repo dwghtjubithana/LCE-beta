@@ -43,6 +43,9 @@
                     <input type="file" id="cameraInput" class="hidden" accept="image/*" capture="environment" onchange="handleFileInputChange(event)">
                 </div>
             </div>
+            <div id="gate2LockNotice" class="hidden mt-4 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+                Complete your Corporate Baseline (KKF/Tax) to unlock this section.
+            </div>
 
             <div id="uploadDropzone" class="mt-4 rounded-2xl border-2 border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500 transition">
                 <div class="flex items-center justify-center gap-2 text-slate-600 font-medium">

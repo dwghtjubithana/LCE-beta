@@ -21,17 +21,17 @@
             <div class="p-4 rounded-xl border border-slate-200 bg-white">
                 <h4 class="font-bold text-slate-800">FREE</h4>
                 <p class="text-sm text-slate-500 mt-1">Uploaden en basisstatus</p>
-                <p class="text-xs text-slate-400 mt-2">AI‑analyse: niet beschikbaar</p>
-            </div>
-            <div class="p-4 rounded-xl border border-slate-200 bg-white">
-                <h4 class="font-bold text-slate-800">PRO</h4>
-                <p class="text-sm text-slate-500 mt-1">AI‑analyse + advies</p>
-                <p class="text-xs text-slate-400 mt-2">Voor compliance checks</p>
+                <p class="text-xs text-slate-400 mt-2">AI‑analyse: geblokkeerd</p>
             </div>
             <div class="p-4 rounded-xl border border-slate-200 bg-white">
                 <h4 class="font-bold text-slate-800">BUSINESS</h4>
-                <p class="text-sm text-slate-500 mt-1">Alles in PRO + Tender details</p>
-                <p class="text-xs text-slate-400 mt-2">Voor grotere bedrijven</p>
+                <p class="text-sm text-slate-500 mt-1">Gate 1 verificatie (Corporate Baseline)</p>
+                <p class="text-xs text-slate-400 mt-2">KKF/CRIB/UBO checks</p>
+            </div>
+            <div class="p-4 rounded-xl border border-slate-200 bg-white">
+                <h4 class="font-bold text-slate-800">ENTERPRISE</h4>
+                <p class="text-sm text-slate-500 mt-1">Gate 2 analysis + volledige tenders</p>
+                <p class="text-xs text-slate-400 mt-2">IOGP-423 readiness</p>
             </div>
         </div>
         <div class="p-6 border-t border-slate-100">

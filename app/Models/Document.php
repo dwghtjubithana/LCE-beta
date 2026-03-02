@@ -13,6 +13,7 @@ class Document extends Model
         'uuid',
         'company_id',
         'category_selected',
+        'is_baseline',
         'detected_type',
         'status',
         'extracted_data',
@@ -34,6 +35,19 @@ class Document extends Model
         'ocr_confidence' => 'float',
         'ai_confidence' => 'float',
         'expiry_date' => 'datetime',
+        'is_baseline' => 'boolean',
+    ];
+
+    public const BASELINE_DOC_TYPES = [
+        'KKF Uittreksel',
+        'CRIB',
+        'UBO',
+    ];
+
+    public const GATE2_DOC_TYPES = [
+        'HSE',
+        'ISO',
+        'IOGP',
     ];
 
     public function company()

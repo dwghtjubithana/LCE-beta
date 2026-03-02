@@ -30,6 +30,8 @@ class CompanyController extends Controller
             'bluewave_status' => false,
             'current_score' => 0,
             'verification_level' => 'unverified',
+            'verification_status' => Company::VERIFICATION_UNVERIFIED,
+            'compliance_gate_passed' => false,
         ]);
 
         $audit->record($user, 'company.create', 'company', $company->id, [
@@ -155,23 +157,30 @@ class CompanyController extends Controller
 
         $states = [];
         foreach ($result['required_types'] as $type) {
-            $doc = $company->id
-                ? \App\Models\Document::where('company_id', $company->id)
-                    ->where('category_selected', $type)
-                    ->orderByDesc('id')
-                    ->first()
-                : null;
             $states[] = [
                 'type' => $type,
-                'status' => $doc->status ?? 'MISSING',
+                'status' => $this->latestCategoryStatus($company->id, $type),
             ];
         }
+
+        $checklistStates = $states;
+        $checklistStates[] = [
+            'type' => 'ID-kaart',
+            'status' => $this->latestCategoryStatus($company->id, 'ID Bewijs'),
+        ];
+        $checklistStates[] = [
+            'type' => 'Bedrijfs Vergunning',
+            'status' => $this->latestCategoryStatus($company->id, 'Bedrijfs Vergunning'),
+        ];
 
         return response()->json([
             'status' => 'success',
             'current_score' => $company->current_score,
             'score_color' => $this->scoreColor($company->current_score),
+            'verification_status' => $company->verification_status ?? Company::VERIFICATION_UNVERIFIED,
+            'compliance_gate_passed' => (bool) $company->compliance_gate_passed,
             'required_documents' => $states,
+            'checklist_documents' => $checklistStates,
         ]);
     }
 
@@ -204,7 +213,8 @@ class CompanyController extends Controller
             ], 404);
         }
 
-        return $pdf->download($company);
+        $isFree = strtoupper((string) ($user->plan ?? 'FREE')) === 'FREE';
+        return $pdf->download($company, $isFree);
     }
 
     public function publicProfile(string $slug): JsonResponse
@@ -382,12 +392,23 @@ class CompanyController extends Controller
             ], 404);
         }
 
-        return $pdf->download($company);
+        $isFree = strtoupper((string) ($user->plan ?? 'FREE')) === 'FREE';
+        return $pdf->download($company, $isFree);
     }
 
     private function authUser(): User
     {
         return request()->attributes->get('auth_user');
+    }
+
+    private function latestCategoryStatus(int $companyId, string $category): string
+    {
+        $doc = \App\Models\Document::where('company_id', $companyId)
+            ->where('category_selected', $category)
+            ->orderByDesc('id')
+            ->first();
+
+        return $doc->status ?? 'MISSING';
     }
 
     private function scoreColor(int $score): string

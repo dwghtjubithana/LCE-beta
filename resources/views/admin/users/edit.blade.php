@@ -46,8 +46,8 @@
             <label for="edit-plan">Plan</label>
             <select id="edit-plan">
                 <option value="FREE">Free</option>
-                <option value="PRO">Pro</option>
                 <option value="BUSINESS">Business</option>
+                <option value="ENTERPRISE">Enterprise</option>
             </select>
         </div>
         <div class="form-field">

@@ -9,6 +9,7 @@ use App\Services\RuleEngine;
 use App\Services\SummaryService;
 use App\Models\Document;
 use App\Models\ComplianceRule;
+use App\Models\Company;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -343,6 +344,8 @@ class ProcessDocument implements ShouldQueue
         $document->expiry_date = $this->parseExpiryDate($extractedData['expiry_date'] ?? null);
         $document->summary_file_path = $summaryPath;
         $document->save();
+
+        $this->applyGateMilestones($document, $extractedData, $aiResult);
     }
 
     private function buildRuleText(string $documentType): string
@@ -361,6 +364,9 @@ class ProcessDocument implements ShouldQueue
         }
         if (!empty($rule->constraints)) {
             $lines[] = 'Constraints: ' . json_encode($rule->constraints);
+        }
+        if (in_array($this->normalizeCategory($documentType), ['HSE', 'ISO', 'IOGP'], true)) {
+            $lines[] = 'Industry standard baseline: Evaluate against IOGP-423 readiness standards.';
         }
         return implode("\n", $lines);
     }
@@ -447,9 +453,141 @@ class ProcessDocument implements ShouldQueue
         $base .= "Maak een samenvatting die alleen over dit documenttype gaat.\n";
         $base .= "Noem gevonden velden, ontbrekende velden en verbeterpunten.\n";
         $base .= "Gebruik alleen OCR-data en bewezen informatie uit het document.\n";
+        if (in_array($this->normalizeCategory($documentType), ['HSE', 'ISO', 'IOGP'], true)) {
+            $base .= "Gebruik IOGP-423 als referentie voor industry readiness.\n";
+        }
         if ($ruleText !== '') {
             $base .= "\nRegels voor dit documenttype:\n{$ruleText}\n";
         }
         return $base;
+    }
+
+    private function applyGateMilestones(Document $document, array $extractedData, $aiResult): void
+    {
+        $company = $document->company()->first();
+        if (!$company) {
+            return;
+        }
+
+        $category = $this->normalizeCategory((string) $document->category_selected);
+        if ($category === 'KKF_UITTREKSEL') {
+            $this->applyGate1FromKkf($company, $document, $extractedData, is_array($aiResult) ? $aiResult : []);
+        }
+
+        if (in_array($category, ['HSE', 'ISO', 'IOGP'], true)) {
+            $this->promoteGate2IfReady($company);
+        }
+    }
+
+    private function applyGate1FromKkf(Company $company, Document $document, array $extractedData, array $aiResult): void
+    {
+        if (strtoupper((string) $document->status) !== 'VALID') {
+            return;
+        }
+
+        $issueDateRaw = $this->firstNonEmpty(
+            $extractedData['issue_date'] ?? null,
+            $extractedData['uitgifte_datum'] ?? null,
+            $aiResult['issue_date'] ?? null,
+            $aiResult['uitgifte_datum'] ?? null
+        );
+        $issueDate = $this->parseExpiryDate($issueDateRaw);
+        if (!$issueDate || $issueDate->lt(now()->subMonths(6))) {
+            $document->status = 'INVALID';
+            $document->ai_feedback = trim(($document->ai_feedback ?? '') . ' Gate 1: KKF issue date must be within 6 months.');
+            $document->save();
+            return;
+        }
+
+        $scannedCompanyName = $this->firstNonEmpty(
+            $extractedData['bedrijfsnaam'] ?? null,
+            $extractedData['company_name'] ?? null,
+            $aiResult['bedrijfsnaam'] ?? null,
+            $aiResult['company_name'] ?? null
+        );
+        if (!$this->companyNameMatches($company->company_name, $scannedCompanyName, (string) ($extractedData['ocr_text'] ?? ''))) {
+            $document->status = 'INVALID';
+            $document->ai_feedback = trim(($document->ai_feedback ?? '') . ' Gate 1: KKF company name does not match registered company.');
+            $document->save();
+            return;
+        }
+
+        $company->verification_status = Company::VERIFICATION_VERIFIED_ENTITY;
+        $company->compliance_gate_passed = true;
+        $company->save();
+    }
+
+    private function promoteGate2IfReady(Company $company): void
+    {
+        $current = strtoupper((string) ($company->verification_status ?? Company::VERIFICATION_UNVERIFIED));
+        if (!in_array($current, [Company::VERIFICATION_VERIFIED_ENTITY, Company::VERIFICATION_OFFSHORE_READY], true)) {
+            return;
+        }
+
+        $required = ['HSE', 'ISO', 'IOGP'];
+        $validTypes = Document::query()
+            ->where('company_id', $company->id)
+            ->where('status', 'VALID')
+            ->get(['category_selected'])
+            ->map(fn ($doc) => $this->normalizeCategory((string) $doc->category_selected))
+            ->unique()
+            ->values()
+            ->all();
+
+        foreach ($required as $type) {
+            if (!in_array($type, $validTypes, true)) {
+                return;
+            }
+        }
+
+        $company->verification_status = Company::VERIFICATION_OFFSHORE_READY;
+        $company->compliance_gate_passed = true;
+        $company->save();
+    }
+
+    private function companyNameMatches(string $registeredName, ?string $scannedName, string $ocrText): bool
+    {
+        $registered = $this->normalizeName($registeredName);
+        if ($registered === '') {
+            return false;
+        }
+
+        $candidate = $this->normalizeName((string) $scannedName);
+        if ($candidate !== '' && (str_contains($candidate, $registered) || str_contains($registered, $candidate))) {
+            return true;
+        }
+
+        $ocr = $this->normalizeName($ocrText);
+        if ($ocr !== '' && str_contains($ocr, $registered)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function normalizeName(string $value): string
+    {
+        $value = mb_strtoupper($value);
+        $value = preg_replace('/[^A-Z0-9]+/u', ' ', $value) ?? '';
+        return trim(preg_replace('/\s+/', ' ', $value) ?? '');
+    }
+
+    private function normalizeCategory(string $value): string
+    {
+        return strtoupper(str_replace([' ', '-'], '_', trim($value)));
+    }
+
+    private function firstNonEmpty(...$values): ?string
+    {
+        foreach ($values as $value) {
+            if ($value === null) {
+                continue;
+            }
+            $str = trim((string) $value);
+            if ($str !== '') {
+                return $str;
+            }
+        }
+        return null;
     }
 }

@@ -6,6 +6,11 @@ class ClassifierService
 {
     private array $typeKeywords = [
         'KKF Uittreksel' => ['KKF', 'KVK', 'Handelsregister', 'Uittreksel'],
+        'CRIB' => ['CRIB', 'Credit Bureau', 'Schulden', 'Krediet'],
+        'UBO' => ['UBO', 'Ultimate Beneficial Owner', 'Beneficial Owner'],
+        'HSE' => ['HSE', 'Health Safety Environment', 'Safety Plan', 'Incident'],
+        'ISO' => ['ISO', 'ISO 9001', 'ISO 14001', 'ISO 45001'],
+        'IOGP' => ['IOGP', 'IOGP-423', 'International Association of Oil & Gas Producers'],
         'Vergunning' => ['Vergunning', 'Permit', 'License'],
         'Belastingverklaring' => ['Belasting', 'Tax', 'Aanslag', 'Verklaring'],
         'ID Bewijs' => ['ID', 'Identiteit', 'Passport', 'Rijbewijs'],

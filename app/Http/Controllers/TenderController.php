@@ -200,13 +200,20 @@ class TenderController extends Controller
 
     private function applyGating(Tender $tender, User $user): array
     {
-        $isBusiness = ($user->plan ?? 'FREE') === 'BUSINESS' && ($user->plan_status ?? 'ACTIVE') === 'ACTIVE';
+        $isLevel3 = $this->isLevel3($user);
         $data = $tender->toArray();
+        $data['contact_details'] = $data['client'] ?? null;
+        $data['attachment_urls'] = $this->extractAttachmentUrls($data['attachments'] ?? null);
 
-        if (!$isBusiness) {
+        if (!$isLevel3) {
             $data['description'] = $data['description'] ? str_repeat('•', 20) : null;
             $data['details_url'] = null;
             $data['attachments'] = null;
+            $data['contact_details'] = null;
+            $data['attachment_urls'] = [];
+            $data['is_blurred'] = true;
+        } else {
+            $data['is_blurred'] = false;
         }
 
         return $data;
@@ -232,6 +239,33 @@ class TenderController extends Controller
         $user->plan = 'FREE';
         $user->plan_status = 'ACTIVE';
         return $user;
+    }
+
+    private function normalizedPlan(User $user): string
+    {
+        $plan = strtoupper((string) ($user->plan ?? 'FREE'));
+        if ($plan === 'PRO') {
+            return 'BUSINESS';
+        }
+        return $plan;
+    }
+
+    private function isLevel3(User $user): bool
+    {
+        return $this->normalizedPlan($user) === 'ENTERPRISE'
+            && strtoupper((string) ($user->plan_status ?? 'ACTIVE')) === 'ACTIVE';
+    }
+
+    private function extractAttachmentUrls($attachments): array
+    {
+        $items = $this->normalizeAttachmentItems($attachments);
+        $urls = [];
+        foreach ($items as $item) {
+            if (($item['type'] ?? '') === 'url' && !empty($item['url'])) {
+                $urls[] = $item['url'];
+            }
+        }
+        return $urls;
     }
 
     private function parseJson($value): ?array

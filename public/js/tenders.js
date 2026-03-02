@@ -131,6 +131,9 @@ function bindModal() {
 }
 
 function isGated(tender) {
+  if (typeof tender?.is_blurred === 'boolean') {
+    return tender.is_blurred;
+  }
   const bullet = typeof tender.description === 'string' && /•/.test(tender.description);
   return !tender.details_url && !tender.attachments && bullet;
 }

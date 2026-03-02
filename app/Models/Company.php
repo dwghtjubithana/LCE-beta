@@ -26,6 +26,7 @@ class Company extends Model
         'lat',
         'lng',
         'verification_status',
+        'compliance_gate_passed',
     ];
 
     protected $casts = [
@@ -34,12 +35,31 @@ class Company extends Model
         'current_score' => 'integer',
         'lat' => 'float',
         'lng' => 'float',
+        'compliance_gate_passed' => 'boolean',
+    ];
+
+    public const VERIFICATION_UNVERIFIED = 'UNVERIFIED';
+    public const VERIFICATION_VERIFIED_ENTITY = 'VERIFIED_ENTITY';
+    public const VERIFICATION_OFFSHORE_READY = 'OFFSHORE_READY';
+
+    public const GATE1_DOC_TYPES = [
+        'KKF Uittreksel',
+        'CRIB',
+        'UBO',
+    ];
+
+    public const GATE2_DOC_TYPES = [
+        'HSE',
+        'ISO',
+        'IOGP',
     ];
 
     public const REQUIRED_DOC_TYPES = [
         'KKF Uittreksel',
-        'Vergunning',
-        'Belastingverklaring',
-        'ID Bewijs',
+        'CRIB',
+        'UBO',
+        'HSE',
+        'ISO',
+        'IOGP',
     ];
 }

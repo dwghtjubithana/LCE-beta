@@ -47,8 +47,13 @@
                 <td>${p.user_id || '-'}</td>
                 <td>${p.company_id || '-'}</td>
                 <td>${p.status || '-'}</td>
+                <td>${p.target_level || 'BUSINESS'}</td>
                 <td>${AdminApp.formatDateTime(p.submitted_at)}</td>
                 <td class="actions">
+                    <select class="input" data-target-level="${p.id}" style="max-width: 140px;">
+                        <option value="BUSINESS" ${(p.target_level || 'BUSINESS') === 'BUSINESS' ? 'selected' : ''}>Level 2</option>
+                        <option value="ENTERPRISE" ${(p.target_level || '') === 'ENTERPRISE' ? 'selected' : ''}>Level 3</option>
+                    </select>
                     <button class="btn secondary" data-action="approve" data-id="${p.id}">Approve</button>
                     <button class="btn secondary" data-action="reject" data-id="${p.id}">Reject</button>
                 </td>
@@ -62,6 +67,7 @@
                         <th>User</th>
                         <th>Company</th>
                         <th>Status</th>
+                        <th>Target Level</th>
                         <th>Submitted</th>
                         <th>Actions</th>
                     </tr>
@@ -88,7 +94,16 @@
     }
 
     async function handleAction(id, action) {
-        const res = await AdminApp.api(`/api/admin/payment-proofs/${id}/${action}`, { method: 'POST' });
+        const payload = {};
+        if (action === 'approve') {
+            const levelEl = document.querySelector(`[data-target-level="${id}"]`);
+            payload.target_level = levelEl?.value || 'BUSINESS';
+        }
+        const res = await AdminApp.api(`/api/admin/payment-proofs/${id}/${action}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
         const data = await res.json();
         if (!res.ok) {
             alert(data.message || 'Action failed');

@@ -14,6 +14,7 @@ class PaymentProof extends Model
         'company_id',
         'file_path',
         'status',
+        'target_level',
         'notes',
         'reviewed_by',
         'submitted_at',

@@ -4,6 +4,49 @@ let currentUser = null;
 let currentCompany = null;
 let pendingFrontFile = null;
 let pendingBackFile = null;
+const GATE2_TYPES = ['HSE', 'ISO', 'IOGP'];
+const SCORE_DOC_META = {
+  KKF_UITTREKSEL: {
+    title: 'KKF Uittreksel (Kamer van Koophandel)',
+    meaning: 'Bewijst dat het bedrijf officieel geregistreerd is.',
+    expected: 'Recente inschrijving, correcte bedrijfsnaam, registratienummer en datum.',
+  },
+  CRIB: {
+    title: 'CRIB Verklaring (Belastingdienst)',
+    meaning: 'Toont fiscale status en betalingsgedrag.',
+    expected: 'Geldige verklaring met bedrijfsgegevens en recente afgiftedatum.',
+  },
+  UBO: {
+    title: 'UBO Verklaring (Ultimate Beneficial Owner)',
+    meaning: 'Maakt de uiteindelijke belanghebbenden inzichtelijk.',
+    expected: 'Eigenaarsstructuur, namen belanghebbenden en ondertekende verklaring.',
+  },
+  HSE: {
+    title: 'HSE Document (Health, Safety & Environment)',
+    meaning: 'Laat zien hoe veiligheid en milieu worden beheerst.',
+    expected: 'Veiligheidsbeleid, risico-aanpak, procedures en verantwoordelijkheden.',
+  },
+  ISO: {
+    title: 'ISO Certificaat',
+    meaning: 'Bewijst dat processen voldoen aan erkende standaarden.',
+    expected: 'Geldig certificaat, scope, certificerende instantie en vervaldatum.',
+  },
+  IOGP: {
+    title: 'IOGP 423 Readiness',
+    meaning: 'Toont aansluiting op offshore/O&G readiness-eisen.',
+    expected: 'Aantoonbare alignment met IOGP-423 vereisten en ondersteunende bewijsstukken.',
+  },
+  ID_KAART: {
+    title: 'ID-kaart',
+    meaning: 'Identificeert de bevoegde persoon van het bedrijf.',
+    expected: 'Duidelijke voorzijde (en indien nodig achterzijde), leesbare naam en geldigheidsdatum.',
+  },
+  BEDRIJFS_VERGUNNING: {
+    title: 'Bedrijfs Vergunning',
+    meaning: 'Toont dat het bedrijf operationeel vergund is voor activiteiten.',
+    expected: 'Geldige vergunning met juiste bedrijfsnaam, activiteit/scope en geldigheidsperiode.',
+  },
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
@@ -141,10 +184,8 @@ async function initializeSession() {
     document.getElementById('userInitials').textContent = initial;
     updatePlanBadges(currentUser);
 
-    // Hide Modal & Unlock UI
+    // Hide Modal & mark connected
     document.getElementById('loginModal').classList.add('hidden');
-    document.getElementById('dashboardContent').style.opacity = '1';
-    document.getElementById('dashboardContent').style.pointerEvents = 'auto';
     document.getElementById('connectionStatus').classList.remove('hidden');
 
     // 2. Load Company
@@ -173,6 +214,7 @@ async function initializeSession() {
     populateCompanyForm(company);
     populateDigitalIdForm(company);
     hideCreateCompanyForm();
+    renderGate2LockNotice();
 
     fetchDashboard();
     fetchDocuments();
@@ -375,11 +417,17 @@ async function fetchDashboard() {
 
     // Update Gauge
     if (hasScoreUi) {
-      updateGauge(data.current_score);
+      if (currentCompany) {
+        currentCompany.verification_status = data.verification_status || currentCompany.verification_status;
+        currentCompany.compliance_gate_passed = !!data.compliance_gate_passed;
+      }
+      updateGauge(data.current_score, data.verification_status);
+      renderGate2LockNotice();
     }
 
     // Update Stats from required_documents
     const required = Array.isArray(data.required_documents) ? data.required_documents : [];
+    const checklistDocs = Array.isArray(data.checklist_documents) ? data.checklist_documents : required;
     updateCategoryOptions(required);
     const counts = {
       valid: 0,
@@ -398,10 +446,15 @@ async function fetchDashboard() {
     });
 
     if (hasScoreUi) {
-      document.getElementById('statValid').textContent = counts.valid;
-      document.getElementById('statReview').textContent = counts.review + counts.missing;
-      document.getElementById('statProcessing').textContent = counts.processing;
-      document.getElementById('statInvalid').textContent = counts.invalid;
+      const statValid = document.getElementById('statValid');
+      const statReview = document.getElementById('statReview');
+      const statProcessing = document.getElementById('statProcessing');
+      const statInvalid = document.getElementById('statInvalid');
+      if (statValid) statValid.textContent = counts.valid;
+      if (statReview) statReview.textContent = counts.review + counts.missing;
+      if (statProcessing) statProcessing.textContent = counts.processing;
+      if (statInvalid) statInvalid.textContent = counts.invalid;
+      renderScoreOverview(data.current_score, checklistDocs, data.verification_status);
     }
 
     // Update Message
@@ -419,10 +472,11 @@ async function fetchDashboard() {
   }
 }
 
-function updateGauge(score) {
+function updateGauge(score, verificationStatus = null) {
   if (!document.getElementById('gaugeProgress')) return;
   // Veiligheidscheck
   if (score === undefined || score === null) score = 0;
+  score = Math.max(0, Math.min(100, Number(score) || 0));
 
   const circle = document.getElementById('gaugeProgress');
   const display = document.getElementById('scoreDisplay');
@@ -430,18 +484,19 @@ function updateGauge(score) {
 
   circle.classList.remove('text-green-500', 'text-orange-500', 'text-red-500', 'text-slate-300');
 
+  const stage = getVerificationStage(verificationStatus || currentCompany?.verification_status);
   let colorClass = 'text-red-500';
-  let labelText = 'KRITIEK';
+  let labelText = 'UNVERIFIED';
   let bgClass = 'bg-red-50 text-red-600';
-
-  if (score >= 91) {
-    colorClass = 'text-green-500';
-    labelText = 'GROEN';
-    bgClass = 'bg-green-50 text-green-600';
-  } else if (score >= 51) {
+  let progressScore = score;
+  if (stage === 2) {
     colorClass = 'text-orange-500';
-    labelText = 'ORANJE';
+    labelText = 'VERIFIED ENTITY';
     bgClass = 'bg-orange-50 text-orange-600';
+  } else if (stage === 3) {
+    colorClass = 'text-green-500';
+    labelText = 'OFFSHORE READY';
+    bgClass = 'bg-green-50 text-green-600';
   }
 
   circle.classList.add(colorClass);
@@ -450,9 +505,122 @@ function updateGauge(score) {
 
   // Dash Calculation
   const circumference = 2 * Math.PI * 40;
-  const offset = circumference - (score / 100) * circumference;
+  const offset = circumference - (progressScore / 100) * circumference;
   circle.style.strokeDashoffset = offset;
-  display.textContent = `${score}%`;
+  display.textContent = `${progressScore}%`;
+}
+
+function renderScoreOverview(score, requiredDocs, verificationStatus) {
+  const intro = document.getElementById('scoreOverviewIntro');
+  const gateBadge = document.getElementById('scoreGateBadge');
+  const docReady = document.getElementById('scoreDocReady');
+  const remaining = document.getElementById('scoreRemaining');
+  const progressBar = document.getElementById('scoreProgressBar');
+  const progressLabel = document.getElementById('scoreProgressLabel');
+  const checklistIntro = document.getElementById('checklistIntro');
+  const checklist = document.getElementById('scoreChecklist');
+  if (!intro || !gateBadge || !docReady || !remaining || !progressBar || !progressLabel || !checklistIntro || !checklist) return;
+
+  const docs = Array.isArray(requiredDocs) ? requiredDocs : [];
+  const scoreValue = Math.max(0, Math.min(100, Number(score) || 0));
+  const total = docs.length;
+  const validCount = docs.filter((doc) => normalizeDocStatus(doc?.status) === 'VALID').length;
+  const missingOrInvalid = docs.filter((doc) => normalizeDocStatus(doc?.status) !== 'VALID');
+  const gateStage = getVerificationStage(verificationStatus || currentCompany?.verification_status);
+
+  intro.textContent = `Je score is ${scoreValue}%: ${validCount} van ${total} verplichte documenten zijn geldig.`;
+  docReady.textContent = `${validCount} / ${total} documenten gereed`;
+  remaining.textContent = `${Math.max(0, 100 - scoreValue)}% te gaan`;
+  progressBar.style.width = `${scoreValue}%`;
+  progressLabel.textContent = `${scoreValue}% van 100%`;
+
+  const gateText = gateStage === 1 ? 'UNVERIFIED' : gateStage === 2 ? 'VERIFIED ENTITY' : 'OFFSHORE READY';
+  const gateClass = gateStage === 1
+    ? 'bg-red-100 text-red-700'
+    : gateStage === 2
+      ? 'bg-orange-100 text-orange-700'
+      : 'bg-emerald-100 text-emerald-700';
+  gateBadge.className = `text-xs font-semibold px-2 py-1 rounded-full ${gateClass}`;
+  gateBadge.textContent = `Gate: ${gateText}`;
+
+  if (missingOrInvalid.length === 0) {
+    checklistIntro.textContent = 'Alles staat op geldig. Je zit op 100%.';
+  } else {
+    checklistIntro.textContent = `${missingOrInvalid.length} document(en) vragen nog actie om 100% te halen.`;
+  }
+
+  checklist.innerHTML = docs.map((doc) => {
+    const typeKey = normalizeDocType(doc?.type);
+    const meta = SCORE_DOC_META[typeKey] || {
+      title: doc?.type || 'Document',
+      meaning: 'Verplicht document binnen het compliance-traject.',
+      expected: 'Upload een leesbare, recente en volledige versie.',
+    };
+    const status = normalizeDocStatus(doc?.status);
+    const done = status === 'VALID';
+    const doneClass = done
+      ? 'border-emerald-200 bg-emerald-50'
+      : 'border-slate-200 bg-white';
+    const badgeClass = done
+      ? 'bg-emerald-100 text-emerald-700'
+      : 'bg-amber-100 text-amber-700';
+    const icon = done ? '&#10003;' : '&#9711;';
+    const iconClass = done ? 'text-emerald-600' : 'text-slate-400';
+    const next = done ? 'Geen actie nodig.' : nextActionForStatus(status, typeKey);
+
+    return `
+      <div class="rounded-xl border p-4 ${doneClass}">
+        <div class="flex items-start gap-3">
+          <span class="text-lg leading-none mt-0.5 ${iconClass}">${icon}</span>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="font-semibold text-slate-800">${escapeHtml(meta.title)}</p>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${badgeClass}">${escapeHtml(humanStatus(status))}</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">${escapeHtml(meta.meaning)}</p>
+            <p class="text-xs text-slate-600 mt-2"><strong>Verwacht:</strong> ${escapeHtml(meta.expected)}</p>
+            <p class="text-xs text-slate-700 mt-2"><strong>Volgende stap:</strong> ${escapeHtml(next)}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function normalizeDocStatus(status) {
+  const value = String(status || 'MISSING').toUpperCase();
+  if (value === 'PASS') return 'VALID';
+  if (value === 'FAIL') return 'INVALID';
+  return value;
+}
+
+function humanStatus(status) {
+  const value = normalizeDocStatus(status);
+  if (value === 'MANUAL_REVIEW') return 'Review nodig';
+  if (value === 'NEEDS_CONFIRMATION') return 'Bevestiging nodig';
+  if (value === 'PROCESSING') return 'In verwerking';
+  if (value === 'MISSING') return 'Ontbreekt';
+  if (value === 'INVALID') return 'Ongeldig';
+  if (value === 'EXPIRED') return 'Verlopen';
+  if (value === 'VALID') return 'Geldig';
+  return value;
+}
+
+function normalizeDocType(type) {
+  return String(type || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
+}
+
+function nextActionForStatus(status, typeKey) {
+  if (status === 'MISSING') return `Upload dit document (${typeKey.replace(/_/g, ' ')}).`;
+  if (status === 'PROCESSING') return 'Wacht op AI-verwerking en controleer straks opnieuw.';
+  if (status === 'MANUAL_REVIEW' || status === 'NEEDS_CONFIRMATION' || status === 'EXPIRING' || status === 'EXPIRING_SOON') {
+    return 'Open het document en volg de aanbevolen actie of upload een betere versie.';
+  }
+  if (status === 'INVALID' || status === 'EXPIRED') return 'Upload een nieuwe, geldige en recente versie.';
+  return 'Controleer documentstatus en werk bij indien nodig.';
 }
 
 function formatDateTime(value) {
@@ -1032,12 +1200,17 @@ function updateCategoryOptions(requiredDocs) {
     const opt = document.createElement('option');
     opt.value = type;
     opt.textContent = type;
+    if (isGate2Type(type) && !isGate2Unlocked()) {
+      opt.disabled = true;
+      opt.textContent = `${type} (Locked)`;
+    }
     select.appendChild(opt);
   });
   if (previous && unique.includes(previous)) {
     select.value = previous;
   }
   handleDocumentTypeChange();
+  renderGate2LockNotice();
 }
 
 function updateUploadFilename(name) {
@@ -1061,6 +1234,13 @@ function handleDocumentTypeChange() {
   const category = document.getElementById('categorySelect')?.value;
   const subtype = document.getElementById('idSubtypeSelect');
   const backBtn = document.getElementById('uploadBackBtn');
+  if (isGate2Type(category) && !isGate2Unlocked()) {
+    const select = document.getElementById('categorySelect');
+    if (select) select.value = '';
+    showToast('Complete your Corporate Baseline (KKF/CRIB/UBO) to unlock this section.', 'error');
+    renderGate2LockNotice();
+    return;
+  }
   const isId = category === 'ID Bewijs';
 
   if (isId) {
@@ -1076,6 +1256,34 @@ function handleDocumentTypeChange() {
     pendingBackFile = null;
     updateUploadBackFilename('');
   }
+}
+
+function getVerificationStage(status) {
+  const normalized = String(status || '').toUpperCase();
+  if (normalized === 'OFFSHORE_READY') return 3;
+  if (normalized === 'VERIFIED_ENTITY') return 2;
+  return 1;
+}
+
+function isGate2Type(type) {
+  return GATE2_TYPES.includes(String(type || '').toUpperCase());
+}
+
+function isGate2Unlocked() {
+  const status = String(currentCompany?.verification_status || '').toUpperCase();
+  return status === 'VERIFIED_ENTITY' || status === 'OFFSHORE_READY' || !!currentCompany?.compliance_gate_passed;
+}
+
+function renderGate2LockNotice() {
+  const notice = document.getElementById('gate2LockNotice');
+  if (!notice) return;
+  if (isGate2Unlocked()) {
+    notice.classList.add('hidden');
+    notice.textContent = '';
+    return;
+  }
+  notice.classList.remove('hidden');
+  notice.textContent = 'Complete your Corporate Baseline (KKF/Tax) to unlock this section.';
 }
 
 function maybeUploadPendingIdDocument() {
@@ -1392,9 +1600,11 @@ function updatePlanBadges(user) {
   statusBadge.textContent = `STATUS: ${status}`;
 
   const planClass = plan === 'BUSINESS'
-    ? 'bg-green-100 text-green-700'
-    : plan === 'PRO'
-      ? 'bg-blue-100 text-blue-700'
+    ? 'bg-blue-100 text-blue-700'
+    : plan === 'ENTERPRISE'
+      ? 'bg-green-100 text-green-700'
+      : plan === 'PRO'
+        ? 'bg-blue-100 text-blue-700'
       : 'bg-slate-200 text-slate-700';
   const statusClass = status === 'PENDING_PAYMENT'
     ? 'bg-orange-100 text-orange-700'
