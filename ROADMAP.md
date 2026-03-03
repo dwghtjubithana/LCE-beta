@@ -28,10 +28,16 @@ High-level planning by phase. Update when scope or sequencing changes.
 ## Phase 5 — Dashboard score + UI contract (Sprint 1) ✅
 - Score formula (4 required docs)
 - Dashboard endpoint + status mapping
+- Dynamic required/checklist documents from compliance rules + company type context
+- Level progress payload (current + next) and upload-time progress popup
+- Upload categories sourced from current level only (mandatory + optional)
 
 ## Phase 6 — Compliance rules + gating (Sprint 1+) ✅
 - Compliance rule model + seed rules
 - Plan gating scaffolding
+- Admin-managed required-document flags and business-type targeting (constraints)
+- Admin-managed level targeting via `constraints.required_levels`
+- Admin can set zero required docs for a level (no hardcoded fallback)
 
 ## Phase 7 — Watchdog + Tender Radar (Backlog) ✅
 - Expiry cron + notifications

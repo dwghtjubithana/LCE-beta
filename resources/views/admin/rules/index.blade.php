@@ -60,12 +60,20 @@
             const requiredFields = Array.isArray(constraints.required_fields)
                 ? constraints.required_fields.join(', ')
                 : '-';
+            const requiredDocument = typeof constraints.required_document === 'boolean'
+                ? (constraints.required_document ? 'Yes' : 'No')
+                : 'Yes';
+            const requiredLevels = Array.isArray(constraints.required_levels)
+                ? constraints.required_levels.join(', ')
+                : '-';
             return `
             <tr>
                 <td>${rule.id}</td>
                 <td>${rule.document_type || '-'}</td>
                 <td>${rule.max_age_months || '-'}</td>
                 <td>${keywords || '-'}</td>
+                <td>${requiredDocument}</td>
+                <td>${requiredLevels}</td>
                 <td>${expiry}</td>
                 <td>${requiredFields}</td>
                 <td class="actions">
@@ -83,6 +91,8 @@
                         <th>Document Type</th>
                         <th>Max Age (months)</th>
                         <th>Keywords</th>
+                        <th>Required</th>
+                        <th>Levels</th>
                         <th>Expiry Required</th>
                         <th>Required Fields</th>
                         <th>Actions</th>

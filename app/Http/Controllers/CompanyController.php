@@ -9,9 +9,11 @@ use App\Models\User;
 use App\Services\AuditLogService;
 use App\Services\ScoreService;
 use App\Services\ProfilePdfService;
+use App\Services\DocumentRequirementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CompanyController extends Controller
@@ -20,7 +22,7 @@ class CompanyController extends Controller
     {
         $user = $this->authUser();
 
-        $company = Company::create([
+        $payload = [
             'uuid' => (string) Str::uuid(),
             'owner_user_id' => $user->id,
             'company_name' => $request->input('company_name'),
@@ -32,7 +34,12 @@ class CompanyController extends Controller
             'verification_level' => 'unverified',
             'verification_status' => Company::VERIFICATION_UNVERIFIED,
             'compliance_gate_passed' => false,
-        ]);
+        ];
+        if ($this->companyTypeKeyAvailable()) {
+            $payload['company_type_key'] = $request->input('company_type_key');
+        }
+
+        $company = Company::create($payload);
 
         $audit->record($user, 'company.create', 'company', $company->id, [
             'company_name' => $company->company_name,
@@ -91,7 +98,7 @@ class CompanyController extends Controller
             }
         }
 
-        $company->fill($request->only([
+        $updatable = [
             'company_name',
             'sector',
             'experience',
@@ -103,7 +110,12 @@ class CompanyController extends Controller
             'address',
             'lat',
             'lng',
-        ]));
+        ];
+        if ($this->companyTypeKeyAvailable()) {
+            $updatable[] = 'company_type_key';
+        }
+
+        $company->fill($request->only($updatable));
         if ($request->filled('verification_level')) {
             $company->verification_status = $this->verificationBadge($request->input('verification_level'));
         }
@@ -137,7 +149,7 @@ class CompanyController extends Controller
         ]);
     }
 
-    public function dashboard(ScoreService $scores, int $id): JsonResponse
+    public function dashboard(ScoreService $scores, DocumentRequirementService $requirements, int $id): JsonResponse
     {
         $user = $this->authUser();
         $company = Company::where('id', $id)
@@ -151,7 +163,8 @@ class CompanyController extends Controller
             ], 404);
         }
 
-        $result = $scores->calculate($company);
+        $currentLevel = $requirements->normalizeLevel((string) ($user->plan ?? 'FREE'));
+        $result = $scores->calculate($company, $currentLevel);
         $company->current_score = $result['score'];
         $company->save();
 
@@ -163,15 +176,15 @@ class CompanyController extends Controller
             ];
         }
 
-        $checklistStates = $states;
-        $checklistStates[] = [
-            'type' => 'ID-kaart',
-            'status' => $this->latestCategoryStatus($company->id, 'ID Bewijs'),
-        ];
-        $checklistStates[] = [
-            'type' => 'Bedrijfs Vergunning',
-            'status' => $this->latestCategoryStatus($company->id, 'Bedrijfs Vergunning'),
-        ];
+        $checklistStates = [];
+        foreach ($requirements->checklistTypesForCompany($company, $currentLevel) as $type) {
+            $checklistStates[] = [
+                'type' => $type === 'ID Bewijs' ? 'ID-kaart' : $type,
+                'status' => $this->latestCategoryStatus($company->id, $type),
+            ];
+        }
+        $levelProgress = $requirements->levelProgress($company, $currentLevel);
+        $uploadCategories = $requirements->uploadCategoriesForCompany($company, $currentLevel);
 
         return response()->json([
             'status' => 'success',
@@ -179,12 +192,15 @@ class CompanyController extends Controller
             'score_color' => $this->scoreColor($company->current_score),
             'verification_status' => $company->verification_status ?? Company::VERIFICATION_UNVERIFIED,
             'compliance_gate_passed' => (bool) $company->compliance_gate_passed,
+            'current_level' => $currentLevel,
             'required_documents' => $states,
             'checklist_documents' => $checklistStates,
+            'upload_categories' => $uploadCategories,
+            'level_progress' => $levelProgress,
         ]);
     }
 
-    public function dashboardMe(ScoreService $scores): JsonResponse
+    public function dashboardMe(ScoreService $scores, DocumentRequirementService $requirements): JsonResponse
     {
         $user = $this->authUser();
         $company = Company::where('owner_user_id', $user->id)->first();
@@ -196,7 +212,7 @@ class CompanyController extends Controller
             ], 404);
         }
 
-        return $this->dashboard($scores, $company->id);
+        return $this->dashboard($scores, $requirements, $company->id);
     }
 
     public function profilePdf(ProfilePdfService $pdf, int $id)
@@ -425,5 +441,14 @@ class CompanyController extends Controller
     private function verificationBadge(?string $level): string
     {
         return $level === 'physical_verified' ? 'GOLD' : 'GRAY';
+    }
+
+    private function companyTypeKeyAvailable(): bool
+    {
+        try {
+            return Schema::hasColumn('companies', 'company_type_key');
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 }

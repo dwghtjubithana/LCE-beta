@@ -44,6 +44,21 @@
             <label for="rule-required-fields">Required fields</label>
             <input class="input" id="rule-required-fields" placeholder="Comma separated (optional)">
         </div>
+        <div class="form-field">
+            <label for="rule-required-document">Required document?</label>
+            <select class="input" id="rule-required-document">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="rule-company-types">Company type keys</label>
+            <input class="input" id="rule-company-types" placeholder="Comma separated (optional)">
+        </div>
+        <div class="form-field">
+            <label for="rule-levels">Required levels</label>
+            <input class="input" id="rule-levels" placeholder="Comma separated (FREE, BUSINESS, ENTERPRISE)">
+        </div>
         <input type="hidden" id="rule-constraints-raw">
     </div>
     <div class="actions" style="margin-top:12px;">
@@ -79,6 +94,14 @@
         document.getElementById('rule-required-fields').value = Array.isArray(constraints.required_fields)
             ? constraints.required_fields.join(', ')
             : '';
+        document.getElementById('rule-required-document').value =
+            typeof constraints.required_document === 'boolean' ? String(constraints.required_document) : 'true';
+        document.getElementById('rule-company-types').value = Array.isArray(constraints.company_type_keys)
+            ? constraints.company_type_keys.join(', ')
+            : '';
+        document.getElementById('rule-levels').value = Array.isArray(constraints.required_levels)
+            ? constraints.required_levels.join(', ')
+            : '';
         document.getElementById('rule-constraints-raw').value = rule.constraints ? JSON.stringify(rule.constraints) : '';
     }
 
@@ -89,11 +112,23 @@
             .split(',')
             .map(s => s.trim())
             .filter(Boolean);
+        const requiredDocument = document.getElementById('rule-required-document').value === 'true';
+        const companyTypeKeys = document.getElementById('rule-company-types').value
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+        const requiredLevels = document.getElementById('rule-levels').value
+            .split(',')
+            .map(s => s.trim().toUpperCase())
+            .filter(Boolean);
         let constraints = null;
-        if (expiryRequiredRaw !== '' || requiredFields.length) {
+        if (expiryRequiredRaw !== '' || requiredFields.length || !requiredDocument || companyTypeKeys.length || requiredLevels.length) {
             constraints = {
                 expiry_required: expiryRequiredRaw === '' ? null : expiryRequiredRaw === 'true',
-                required_fields: requiredFields.length ? requiredFields : null
+                required_fields: requiredFields.length ? requiredFields : null,
+                required_document: requiredDocument,
+                company_type_keys: companyTypeKeys.length ? companyTypeKeys : null,
+                required_levels: requiredLevels.length ? requiredLevels : null
             };
         }
         const raw = document.getElementById('rule-constraints-raw').value.trim();

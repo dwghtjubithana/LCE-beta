@@ -14,6 +14,7 @@ class UpdateCompanyRequest extends BaseRequest
         return [
             'company_name' => 'sometimes|required|string|max:255',
             'sector' => 'sometimes|required|string|max:255',
+            'company_type_key' => 'nullable|string|max:120',
             'experience' => 'nullable|string',
             'contact' => 'nullable|array',
             'contact.email' => 'nullable|email|max:255',

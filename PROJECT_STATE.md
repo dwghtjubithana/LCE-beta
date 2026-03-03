@@ -3,10 +3,10 @@
 Tracks the latest change plus the previous two changes.
 
 ## Latest change
-- Fixed payment proof file lookup on local disk and persisted pending status on refresh.
+- Aligned level flow to admin-first rules: FREE uploads enabled, current-level-only upload categories (mandatory + optional), zero-required-level support, and popup with invalid reason.
 
 ## Previous change
-- Added payment proof preview (image/link) using authenticated file endpoint.
+- Added level-based requirements/progress (current + next level), admin `required_levels` controls, and upload completion progress popup.
 
 ## Prior change
-- Fixed profile photo preview (auth fetch) and added client-side geocode fallback.
+- Added dynamic document requirements (admin rules + company type), synced dashboard/upload categories, and enforced business-type checks.

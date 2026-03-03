@@ -43,6 +43,15 @@
         const requiredFields = Array.isArray(constraints.required_fields)
             ? constraints.required_fields.join(', ')
             : '—';
+        const requiredDocument = typeof constraints.required_document === 'boolean'
+            ? (constraints.required_document ? 'Yes' : 'No')
+            : 'Yes';
+        const companyTypes = Array.isArray(constraints.company_type_keys)
+            ? constraints.company_type_keys.join(', ')
+            : '—';
+        const requiredLevels = Array.isArray(constraints.required_levels)
+            ? constraints.required_levels.join(', ')
+            : '—';
         document.getElementById('rule-detail').innerHTML = `
             <div class="card" style="margin-bottom:16px;">
                 <div class="status" style="font-weight:700; font-size:16px;">${rule.document_type || '—'}</div>
@@ -52,8 +61,11 @@
             </div>
             <div class="card">
                 <div class="status" style="font-weight:600;">Constraints</div>
+                <div class="status">Required document: ${requiredDocument}</div>
                 <div class="status">Expiry required: ${expiry}</div>
                 <div class="status">Required fields: ${requiredFields}</div>
+                <div class="status">Company type keys: ${companyTypes}</div>
+                <div class="status">Required levels: ${requiredLevels}</div>
             </div>
         `;
     }

@@ -6,21 +6,26 @@ use App\Models\Company;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class AdminCompanyController extends Controller
 {
     public function store(Request $request, AuditLogService $audit): JsonResponse
     {
-        $data = $request->validate([
+        $rules = [
             'owner_user_id' => ['required', 'integer'],
             'company_name' => ['required', 'string', 'max:255'],
             'sector' => ['required', 'string', 'max:255'],
             'experience' => ['nullable', 'string'],
             'contact' => ['nullable'],
-        ]);
+        ];
+        if ($this->companyTypeKeyAvailable()) {
+            $rules['company_type_key'] = ['nullable', 'string', 'max:120'];
+        }
+        $data = $request->validate($rules);
 
-        $company = Company::create([
+        $payload = [
             'uuid' => (string) Str::uuid(),
             'owner_user_id' => $data['owner_user_id'],
             'company_name' => $data['company_name'],
@@ -30,7 +35,12 @@ class AdminCompanyController extends Controller
             'bluewave_status' => false,
             'current_score' => 0,
             'verification_level' => 'unverified',
-        ]);
+        ];
+        if ($this->companyTypeKeyAvailable()) {
+            $payload['company_type_key'] = $data['company_type_key'] ?? null;
+        }
+
+        $company = Company::create($payload);
 
         $audit->record($this->authUser(), 'admin.companies.create', 'company', $company->id, [
             'company_name' => $company->company_name,
@@ -99,5 +109,14 @@ class AdminCompanyController extends Controller
     private function authUser()
     {
         return request()->attributes->get('auth_user');
+    }
+
+    private function companyTypeKeyAvailable(): bool
+    {
+        try {
+            return Schema::hasColumn('companies', 'company_type_key');
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 }

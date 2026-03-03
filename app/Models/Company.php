@@ -14,6 +14,7 @@ class Company extends Model
         'owner_user_id',
         'company_name',
         'sector',
+        'company_type_key',
         'experience',
         'contact',
         'bluewave_status',

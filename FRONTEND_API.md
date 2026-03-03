@@ -59,6 +59,7 @@ POST `/api/companies`
 - Body (JSON):
   - `company_name` (string, required)
   - `sector` (string, required)
+  - `company_type_key` (string, optional; used for business-type requirements)
   - `experience` (string, optional)
   - `contact` (object, optional)
 - Response 201:
@@ -85,6 +86,7 @@ PATCH `/api/companies/{id}`
 - Body (JSON):
   - `company_name` (string, optional)
   - `sector` (string, optional)
+  - `company_type_key` (string, optional)
   - `experience` (string, optional)
   - `contact` (object, optional)
   - `bluewave_status` (boolean, optional)
@@ -104,9 +106,24 @@ GET `/api/companies/{id}/dashboard`
   "score_color": "Rood" | "Oranje" | "Groen",
   "required_documents": [
     { "type": "KKF Uittreksel", "status": "VALID|INVALID|PROCESSING|MISSING|..." }
-  ]
+  ],
+  "checklist_documents": [
+    { "type": "ID-kaart", "status": "VALID|INVALID|PROCESSING|MISSING|..." }
+  ],
+  "upload_categories": [
+    { "type": "KKF Uittreksel", "required": true },
+    { "type": "ID Bewijs", "required": false }
+  ],
+  "level_progress": {
+    "current": { "level": "FREE|BUSINESS|ENTERPRISE", "percent": 0-100, "valid_count": 0, "total_required": 0, "missing_documents": ["..."] },
+    "next": { "level": "BUSINESS|ENTERPRISE", "percent": 0-100, "valid_count": 0, "total_required": 0, "missing_documents": ["..."] } // nullable
+  }
 }
 ```
+Notes:
+- Required/checklist docs are now driven by admin compliance rules plus company-type requirements.
+- Upload categories are current-level only, and include mandatory + optional document types.
+- Unsupported categories return `CATEGORY_NOT_ALLOWED`.
 
 GET `/api/companies/{id}/profile.pdf`
 - Headers: Bearer
@@ -268,6 +285,7 @@ POST `/api/admin/companies`
   - `owner_user_id` (int, required)
   - `company_name` (string, required)
   - `sector` (string, required)
+  - `company_type_key` (string, optional)
   - `experience` (string, optional)
   - `contact_email` (string, optional)
   - `contact_phone` (string, optional)
@@ -296,7 +314,10 @@ DELETE `/api/admin/compliance-rules/{id}`
   - `sector_applicability` (array of strings, optional)
   - `required_keywords` (array of strings, optional)
   - `max_age_months` (int, optional)
-  - `constraints` (object, optional)
+  - `constraints` (object, optional):
+    - `required_document` (boolean, optional, default true)
+    - `company_type_keys` (array of strings, optional)
+    - `required_levels` (array of strings, optional; `FREE|BUSINESS|ENTERPRISE`)
 
 GET `/api/admin/tenders?search=&limit=&page=`
 POST `/api/admin/tenders`

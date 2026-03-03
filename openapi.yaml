@@ -67,6 +67,9 @@ components:
           type: string
         sector:
           type: string
+        company_type_key:
+          type: string
+          nullable: true
         experience:
           type: string
           nullable: true
@@ -432,6 +435,8 @@ paths:
                   type: string
                 sector:
                   type: string
+                company_type_key:
+                  type: string
                 experience:
                   type: string
                 contact:
@@ -536,6 +541,8 @@ paths:
                   type: string
                 sector:
                   type: string
+                company_type_key:
+                  type: string
                 experience:
                   type: string
                 contact:
@@ -600,6 +607,58 @@ paths:
                           type: string
                         status:
                           type: string
+                  checklist_documents:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        status:
+                          type: string
+                  upload_categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        required:
+                          type: boolean
+                  level_progress:
+                    type: object
+                    properties:
+                      current:
+                        type: object
+                        properties:
+                          level:
+                            type: string
+                          percent:
+                            type: integer
+                          valid_count:
+                            type: integer
+                          total_required:
+                            type: integer
+                          missing_documents:
+                            type: array
+                            items:
+                              type: string
+                      next:
+                        type: object
+                        nullable: true
+                        properties:
+                          level:
+                            type: string
+                          percent:
+                            type: integer
+                          valid_count:
+                            type: integer
+                          total_required:
+                            type: integer
+                          missing_documents:
+                            type: array
+                            items:
+                              type: string
         '404':
           $ref: '#/components/responses/NotFound'
         '401':
@@ -982,6 +1041,17 @@ paths:
                   type: integer
                 constraints:
                   type: object
+                  properties:
+                    required_document:
+                      type: boolean
+                    company_type_keys:
+                      type: array
+                      items:
+                        type: string
+                    required_levels:
+                      type: array
+                      items:
+                        type: string
       responses:
         '201':
           description: Compliance rule created
@@ -1034,6 +1104,17 @@ paths:
                   type: integer
                 constraints:
                   type: object
+                  properties:
+                    required_document:
+                      type: boolean
+                    company_type_keys:
+                      type: array
+                      items:
+                        type: string
+                    required_levels:
+                      type: array
+                      items:
+                        type: string
       responses:
         '200':
           description: Compliance rule updated

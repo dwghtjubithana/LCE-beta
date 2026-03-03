@@ -12,6 +12,7 @@ use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Services\DocumentRequirementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
@@ -20,15 +21,9 @@ use Illuminate\Support\Str;
 
 class DocumentController extends Controller
 {
-    public function upload(UploadDocumentRequest $request, AuditLogService $audit): JsonResponse
+    public function upload(UploadDocumentRequest $request, AuditLogService $audit, DocumentRequirementService $requirements): JsonResponse
     {
         $user = $this->authUser();
-        if (!$this->isAtLeastLevel2($user)) {
-            return response()->json([
-                'code' => 'PLAN_RESTRICTED',
-                'message' => 'Document analysis is available from Level 2 (Business).',
-            ], 403);
-        }
         if ($this->gatingEnabled() && !$this->canRunAi($user)) {
             return response()->json([
                 'code' => 'PLAN_RESTRICTED',
@@ -50,23 +45,12 @@ class DocumentController extends Controller
         }
 
         $category = (string) $request->input('category_selected');
+        $blockedResponse = $this->validateCategoryAllowed($company, $category, $requirements, $this->normalizedPlan($user));
+        if ($blockedResponse) {
+            return $blockedResponse;
+        }
         $normalizedCategory = $this->normalizeCategory($category);
         $isBaselineCategory = in_array($normalizedCategory, $this->normalizedBaselineTypes(), true);
-        $isGate2Category = in_array($normalizedCategory, $this->normalizedGate2Types(), true);
-        if ($isGate2Category) {
-            if (!$this->companyGate1Passed($company)) {
-                return response()->json([
-                    'code' => 'BASELINE_REQUIRED',
-                    'message' => 'Complete your Corporate Baseline (KKF/CRIB/UBO) to unlock this section.',
-                ], 403);
-            }
-            if (!$this->isLevel3($user)) {
-                return response()->json([
-                    'code' => 'PLAN_RESTRICTED',
-                    'message' => 'Gate 2 analysis requires Level 3 (Enterprise).',
-                ], 403);
-            }
-        }
         $isIdCategory = $category === 'ID Bewijs';
         $idSubtype = (string) $request->input('id_subtype', '');
         $frontFile = $request->file('front_file');
@@ -224,15 +208,9 @@ class DocumentController extends Controller
         ], 201);
     }
 
-    public function uploadBulk(BulkUploadDocumentRequest $request, AuditLogService $audit): JsonResponse
+    public function uploadBulk(BulkUploadDocumentRequest $request, AuditLogService $audit, DocumentRequirementService $requirements): JsonResponse
     {
         $user = $this->authUser();
-        if (!$this->isAtLeastLevel2($user)) {
-            return response()->json([
-                'code' => 'PLAN_RESTRICTED',
-                'message' => 'Document analysis is available from Level 2 (Business).',
-            ], 403);
-        }
         if ($this->gatingEnabled() && !$this->canRunAi($user)) {
             return response()->json([
                 'code' => 'PLAN_RESTRICTED',
@@ -255,23 +233,12 @@ class DocumentController extends Controller
         }
 
         $category = $request->input('category_selected');
+        $blockedResponse = $this->validateCategoryAllowed($company, (string) $category, $requirements, $this->normalizedPlan($user));
+        if ($blockedResponse) {
+            return $blockedResponse;
+        }
         $normalizedCategory = $this->normalizeCategory((string) $category);
         $isBaselineCategory = in_array($normalizedCategory, $this->normalizedBaselineTypes(), true);
-        $isGate2Category = in_array($normalizedCategory, $this->normalizedGate2Types(), true);
-        if ($isGate2Category) {
-            if (!$this->companyGate1Passed($company)) {
-                return response()->json([
-                    'code' => 'BASELINE_REQUIRED',
-                    'message' => 'Complete your Corporate Baseline (KKF/CRIB/UBO) to unlock this section.',
-                ], 403);
-            }
-            if (!$this->isLevel3($user)) {
-                return response()->json([
-                    'code' => 'PLAN_RESTRICTED',
-                    'message' => 'Gate 2 analysis requires Level 3 (Enterprise).',
-                ], 403);
-            }
-        }
         $results = [];
         foreach ($request->file('files', []) as $file) {
             if (!$file || !$file->isValid()) {
@@ -445,12 +412,6 @@ class DocumentController extends Controller
     public function reprocess(ReprocessDocumentRequest $request, AuditLogService $audit, int $id): JsonResponse
     {
         $user = $this->authUser();
-        if (!$this->isAtLeastLevel2($user)) {
-            return response()->json([
-                'code' => 'PLAN_RESTRICTED',
-                'message' => 'Document analysis is available from Level 2 (Business).',
-            ], 403);
-        }
         $document = Document::query()
             ->where('id', $id)
             ->whereHas('company', function ($query) use ($user) {
@@ -471,22 +432,6 @@ class DocumentController extends Controller
                 'message' => 'Upgrade required to run AI analysis.',
             ], 403);
         }
-        $normalizedCategory = $this->normalizeCategory((string) $document->category_selected);
-        if (in_array($normalizedCategory, $this->normalizedGate2Types(), true)) {
-            if (!$this->companyGate1Passed($document->company)) {
-                return response()->json([
-                    'code' => 'BASELINE_REQUIRED',
-                    'message' => 'Complete your Corporate Baseline (KKF/CRIB/UBO) to unlock this section.',
-                ], 403);
-            }
-            if (!$this->isLevel3($user)) {
-                return response()->json([
-                    'code' => 'PLAN_RESTRICTED',
-                    'message' => 'Gate 2 analysis requires Level 3 (Enterprise).',
-                ], 403);
-            }
-        }
-
         $document->status = 'PROCESSING';
         $document->save();
 
@@ -501,15 +446,9 @@ class DocumentController extends Controller
         ]);
     }
 
-    public function confirm(ConfirmDocumentRequest $request, AuditLogService $audit, int $id): JsonResponse
+    public function confirm(ConfirmDocumentRequest $request, AuditLogService $audit, DocumentRequirementService $requirements, int $id): JsonResponse
     {
         $user = $this->authUser();
-        if (!$this->isAtLeastLevel2($user)) {
-            return response()->json([
-                'code' => 'PLAN_RESTRICTED',
-                'message' => 'Document analysis is available from Level 2 (Business).',
-            ], 403);
-        }
         $document = Document::query()
             ->where('id', $id)
             ->whereHas('company', function ($query) use ($user) {
@@ -525,21 +464,11 @@ class DocumentController extends Controller
         }
 
         $category = (string) $request->input('category_selected');
-        $normalizedCategory = $this->normalizeCategory($category);
-        if (in_array($normalizedCategory, $this->normalizedGate2Types(), true)) {
-            if (!$this->companyGate1Passed($document->company)) {
-                return response()->json([
-                    'code' => 'BASELINE_REQUIRED',
-                    'message' => 'Complete your Corporate Baseline (KKF/CRIB/UBO) to unlock this section.',
-                ], 403);
-            }
-            if (!$this->isLevel3($user)) {
-                return response()->json([
-                    'code' => 'PLAN_RESTRICTED',
-                    'message' => 'Gate 2 analysis requires Level 3 (Enterprise).',
-                ], 403);
-            }
+        $blockedResponse = $this->validateCategoryAllowed($document->company, $category, $requirements, $this->normalizedPlan($user));
+        if ($blockedResponse) {
+            return $blockedResponse;
         }
+        $normalizedCategory = $this->normalizeCategory($category);
 
         $document->category_selected = $category;
         $document->is_baseline = in_array($normalizedCategory, $this->normalizedBaselineTypes(), true);
@@ -618,9 +547,8 @@ class DocumentController extends Controller
 
     private function canRunAi(User $user): bool
     {
-        $plan = $this->normalizedPlan($user);
         $status = $user->plan_status ?? 'ACTIVE';
-        return $status === 'ACTIVE' && in_array($plan, ['BUSINESS', 'ENTERPRISE'], true);
+        return strtoupper((string) $status) === 'ACTIVE';
     }
 
     private function gatingEnabled(): bool
@@ -714,26 +642,9 @@ class DocumentController extends Controller
         return $plan;
     }
 
-    private function isAtLeastLevel2(User $user): bool
-    {
-        return in_array($this->normalizedPlan($user), ['BUSINESS', 'ENTERPRISE'], true)
-            && strtoupper((string) ($user->plan_status ?? 'ACTIVE')) === 'ACTIVE';
-    }
-
-    private function isLevel3(User $user): bool
-    {
-        return $this->normalizedPlan($user) === 'ENTERPRISE'
-            && strtoupper((string) ($user->plan_status ?? 'ACTIVE')) === 'ACTIVE';
-    }
-
     private function normalizedBaselineTypes(): array
     {
         return array_map(fn ($type) => $this->normalizeCategory($type), Document::BASELINE_DOC_TYPES);
-    }
-
-    private function normalizedGate2Types(): array
-    {
-        return array_map(fn ($type) => $this->normalizeCategory($type), Document::GATE2_DOC_TYPES);
     }
 
     private function normalizeCategory(string $value): string
@@ -741,13 +652,21 @@ class DocumentController extends Controller
         return strtoupper(str_replace([' ', '-'], '_', trim($value)));
     }
 
-    private function companyGate1Passed(?Company $company): bool
+    private function validateCategoryAllowed(Company $company, string $category, DocumentRequirementService $requirements, string $level): ?JsonResponse
     {
-        if (!$company) {
-            return false;
+        $normalizedCategory = $this->normalizeCategory($category);
+        $allowed = $requirements->allowedTypesForCompany($company, $level);
+        $normalizedAllowed = array_map(fn ($type) => $this->normalizeCategory((string) $type), $allowed);
+
+        if (in_array($normalizedCategory, $normalizedAllowed, true)) {
+            return null;
         }
-        $verification = strtoupper((string) ($company->verification_status ?? 'UNVERIFIED'));
-        return $company->compliance_gate_passed
-            || in_array($verification, ['VERIFIED_ENTITY', 'OFFSHORE_READY'], true);
+
+        return response()->json([
+            'code' => 'CATEGORY_NOT_ALLOWED',
+            'message' => 'Dit documenttype is niet beschikbaar voor dit bedrijfstype.',
+            'allowed_categories' => $allowed,
+        ], 422);
     }
+
 }

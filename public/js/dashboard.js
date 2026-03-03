@@ -4,7 +4,8 @@ let currentUser = null;
 let currentCompany = null;
 let pendingFrontFile = null;
 let pendingBackFile = null;
-const GATE2_TYPES = ['HSE', 'ISO', 'IOGP'];
+let pendingProgressPopup = false;
+let pendingUploadResult = null;
 const SCORE_DOC_META = {
   KKF_UITTREKSEL: {
     title: 'KKF Uittreksel (Kamer van Koophandel)',
@@ -51,6 +52,7 @@ const SCORE_DOC_META = {
 document.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
   initUploadUi();
+  initComplianceProgressModal();
 
   // Strikte auth check
   if (authToken) {
@@ -60,6 +62,19 @@ document.addEventListener('DOMContentLoaded', () => {
     showLoginModal();
   }
 });
+
+function initComplianceProgressModal() {
+  const closeBtn = document.getElementById('complianceProgressClose');
+  const okBtn = document.getElementById('complianceProgressOk');
+  const modal = document.getElementById('complianceProgressModal');
+  closeBtn?.addEventListener('click', closeComplianceProgressPopup);
+  okBtn?.addEventListener('click', closeComplianceProgressPopup);
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeComplianceProgressPopup();
+    }
+  });
+}
 
 function initUploadUi() {
   const uploadBtn = document.getElementById('uploadBtn');
@@ -214,7 +229,6 @@ async function initializeSession() {
     populateCompanyForm(company);
     populateDigitalIdForm(company);
     hideCreateCompanyForm();
-    renderGate2LockNotice();
 
     fetchDashboard();
     fetchDocuments();
@@ -408,8 +422,11 @@ async function fetchDashboard() {
     });
 
     if (!res.ok) {
-      document.getElementById('scoreMessage').textContent = `Server Fout: ${res.status}`;
-      document.getElementById('scoreMessage').classList.add('text-red-500');
+      const msgEl = document.getElementById('scoreMessage');
+      if (msgEl) {
+        msgEl.textContent = `Server Fout: ${res.status}`;
+        msgEl.classList.add('text-red-500');
+      }
       return;
     }
 
@@ -422,13 +439,13 @@ async function fetchDashboard() {
         currentCompany.compliance_gate_passed = !!data.compliance_gate_passed;
       }
       updateGauge(data.current_score, data.verification_status);
-      renderGate2LockNotice();
     }
 
     // Update Stats from required_documents
     const required = Array.isArray(data.required_documents) ? data.required_documents : [];
     const checklistDocs = Array.isArray(data.checklist_documents) ? data.checklist_documents : required;
-    updateCategoryOptions(required);
+    const uploadCategories = Array.isArray(data.upload_categories) ? data.upload_categories : [];
+    updateCategoryOptions(uploadCategories, required);
     const counts = {
       valid: 0,
       review: 0,
@@ -455,6 +472,12 @@ async function fetchDashboard() {
       if (statProcessing) statProcessing.textContent = counts.processing;
       if (statInvalid) statInvalid.textContent = counts.invalid;
       renderScoreOverview(data.current_score, checklistDocs, data.verification_status);
+    }
+
+    if (pendingProgressPopup && data.level_progress) {
+      showComplianceProgressPopup(data.level_progress, pendingUploadResult);
+      pendingProgressPopup = false;
+      pendingUploadResult = null;
     }
 
     // Update Message
@@ -850,6 +873,8 @@ async function handleFileUpload(file, options = {}) {
     }
     setUploadError('');
     setUploadProgress(100, 'Klaar.');
+    pendingUploadResult = await monitorDocumentResult(data?.document?.id);
+    pendingProgressPopup = true;
 
     // Refresh data
     fetchDocuments();
@@ -909,6 +934,7 @@ function formatApiError(errData, fallback) {
     INVALID_FILE: 'Het bestand is ongeldig. Probeer een andere upload.',
     LOW_OCR_CONFIDENCE: 'De foto is te donker of onleesbaar. Probeer een scherpere foto.',
     DUPLICATE_DOCUMENT: 'Dit document is al eerder geüpload.',
+    CATEGORY_NOT_ALLOWED: 'Dit documenttype is niet toegestaan voor jouw huidige level.',
     VALIDATION_ERROR: 'Controleer het formulier. Er ontbreekt verplichte info.'
   };
 
@@ -1017,6 +1043,133 @@ function showToast(msg, type = 'info') {
   toast.classList.remove('translate-y-32'); // Slide in
 
   setTimeout(() => toast.classList.add('translate-y-32'), 3000); // Slide out
+}
+
+function levelLabel(level) {
+  const value = String(level || '').toUpperCase();
+  if (value === 'FREE') return 'Level 1';
+  if (value === 'BUSINESS') return 'Level 2';
+  if (value === 'ENTERPRISE') return 'Level 3';
+  return value || 'Level';
+}
+
+function showComplianceProgressPopup(progress, uploadResult = null) {
+  const modal = document.getElementById('complianceProgressModal');
+  const title = document.getElementById('complianceProgressTitle');
+  const subtitle = document.getElementById('complianceProgressSubtitle');
+  const currentLabel = document.getElementById('complianceCurrentLevelLabel');
+  const currentPercent = document.getElementById('complianceCurrentPercent');
+  const currentBar = document.getElementById('complianceCurrentBar');
+  const currentMeta = document.getElementById('complianceCurrentMeta');
+  const currentMissing = document.getElementById('complianceCurrentMissing');
+  const nextWrap = document.getElementById('complianceNextWrap');
+  const nextLabel = document.getElementById('complianceNextLevelLabel');
+  const nextPercent = document.getElementById('complianceNextPercent');
+  const nextBar = document.getElementById('complianceNextBar');
+  const nextMeta = document.getElementById('complianceNextMeta');
+  const nextMissing = document.getElementById('complianceNextMissing');
+  const resultWrap = document.getElementById('complianceResultWrap');
+  const resultStatus = document.getElementById('complianceResultStatus');
+  const resultReason = document.getElementById('complianceResultReason');
+  if (!modal || !progress || !progress.current) return;
+
+  const current = progress.current || {};
+  const next = progress.next || null;
+  const currentPct = Math.max(0, Math.min(100, Number(current.percent) || 0));
+  title.textContent = `Upload verwerkt: ${currentPct}% compleet`;
+  subtitle.textContent = 'Je voortgang is opnieuw berekend op basis van geldige documenten.';
+  currentLabel.textContent = `${levelLabel(current.level)} voortgang`;
+  currentPercent.textContent = `${currentPct}%`;
+  currentBar.style.width = `${currentPct}%`;
+  currentMeta.textContent = `${current.valid_count || 0} / ${current.total_required || 0} documenten geldig`;
+  const currentMissingList = Array.isArray(current.missing_documents) ? current.missing_documents : [];
+  currentMissing.textContent = currentMissingList.length
+    ? `Nog nodig: ${currentMissingList.join(', ')}`
+    : 'Alle vereisten voor dit level zijn compleet.';
+
+  if (next) {
+    const nextPct = Math.max(0, Math.min(100, Number(next.percent) || 0));
+    nextWrap.classList.remove('hidden');
+    nextLabel.textContent = `${levelLabel(next.level)} voorbereiding`;
+    nextPercent.textContent = `${nextPct}%`;
+    nextBar.style.width = `${nextPct}%`;
+    nextMeta.textContent = `${next.valid_count || 0} / ${next.total_required || 0} documenten geldig`;
+    const nextMissingList = Array.isArray(next.missing_documents) ? next.missing_documents : [];
+    nextMissing.textContent = nextMissingList.length
+      ? `Voor volgend level nog nodig: ${nextMissingList.join(', ')}`
+      : 'Je voldoet al aan alle vereisten voor het volgende level.';
+  } else {
+    nextWrap.classList.add('hidden');
+  }
+
+  if (uploadResult && uploadResult.status) {
+    resultWrap.classList.remove('hidden');
+    const normalized = String(uploadResult.status).toUpperCase();
+    resultStatus.textContent = normalized;
+    resultStatus.className = 'text-xs font-semibold px-2 py-1 rounded-full';
+    if (normalized === 'VALID') {
+      resultStatus.classList.add('bg-emerald-100', 'text-emerald-700');
+      resultReason.textContent = 'Document is geldig verwerkt.';
+    } else if (normalized === 'INVALID') {
+      resultStatus.classList.add('bg-red-100', 'text-red-700');
+      resultReason.textContent = uploadResult.reason || 'Document is ongeldig. Open het document voor details.';
+    } else if (normalized === 'MANUAL_REVIEW' || normalized === 'NEEDS_CONFIRMATION') {
+      resultStatus.classList.add('bg-orange-100', 'text-orange-700');
+      resultReason.textContent = uploadResult.reason || 'Controle door gebruiker of admin vereist.';
+    } else if (normalized === 'PROCESSING') {
+      resultStatus.classList.add('bg-blue-100', 'text-blue-700');
+      resultReason.textContent = 'AI-verwerking loopt nog. Ververs later voor het definitieve resultaat.';
+    } else {
+      resultStatus.classList.add('bg-slate-200', 'text-slate-700');
+      resultReason.textContent = uploadResult.reason || 'Status bijgewerkt.';
+    }
+  } else {
+    resultWrap.classList.add('hidden');
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function closeComplianceProgressPopup() {
+  const modal = document.getElementById('complianceProgressModal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+}
+
+async function monitorDocumentResult(docId) {
+  if (!docId) return null;
+  const attempts = 10;
+  for (let i = 0; i < attempts; i += 1) {
+    await sleep(i === 0 ? 600 : 1200);
+    try {
+      const res = await fetch(`${API_BASE}/documents/${docId}`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) continue;
+      const doc = data?.document || {};
+      const status = String(doc.status || '').toUpperCase();
+      if (status && status !== 'PROCESSING') {
+        return {
+          status,
+          reason: doc.ai_feedback || '',
+        };
+      }
+      if (i === attempts - 1) {
+        return {
+          status: status || 'PROCESSING',
+          reason: doc.ai_feedback || '',
+        };
+      }
+    } catch {
+      // continue polling
+    }
+  }
+  return null;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function populateCompanyForm(company) {
@@ -1188,29 +1341,39 @@ async function reprocessDocument(docId) {
   }
 }
 
-function updateCategoryOptions(requiredDocs) {
+function updateCategoryOptions(uploadCategories, requiredDocs = []) {
   const select = document.getElementById('categorySelect');
   if (!select) return;
   const previous = select.value;
-  const options = Array.isArray(requiredDocs) ? requiredDocs : [];
-  const unique = [...new Set(options.map((item) => item.type).filter(Boolean))];
+  const fromUpload = Array.isArray(uploadCategories) ? uploadCategories : [];
+  const fallback = Array.isArray(requiredDocs) ? requiredDocs : [];
+  const options = fromUpload.length ? fromUpload : fallback;
+  const normalized = options
+    .map((item) => ({
+      type: item?.type,
+      required: item?.required !== false,
+    }))
+    .filter((item) => item.type);
+  const unique = [];
+  const seen = new Set();
+  normalized.forEach((item) => {
+    const key = String(item.type).toUpperCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    unique.push(item);
+  });
 
   select.innerHTML = '<option value="">Kies documenttype</option>';
-  unique.forEach((type) => {
+  unique.forEach((item) => {
     const opt = document.createElement('option');
-    opt.value = type;
-    opt.textContent = type;
-    if (isGate2Type(type) && !isGate2Unlocked()) {
-      opt.disabled = true;
-      opt.textContent = `${type} (Locked)`;
-    }
+    opt.value = item.type;
+    opt.textContent = item.required ? item.type : `${item.type} (Optioneel)`;
     select.appendChild(opt);
   });
-  if (previous && unique.includes(previous)) {
+  if (previous && unique.some((item) => item.type === previous)) {
     select.value = previous;
   }
   handleDocumentTypeChange();
-  renderGate2LockNotice();
 }
 
 function updateUploadFilename(name) {
@@ -1234,13 +1397,6 @@ function handleDocumentTypeChange() {
   const category = document.getElementById('categorySelect')?.value;
   const subtype = document.getElementById('idSubtypeSelect');
   const backBtn = document.getElementById('uploadBackBtn');
-  if (isGate2Type(category) && !isGate2Unlocked()) {
-    const select = document.getElementById('categorySelect');
-    if (select) select.value = '';
-    showToast('Complete your Corporate Baseline (KKF/CRIB/UBO) to unlock this section.', 'error');
-    renderGate2LockNotice();
-    return;
-  }
   const isId = category === 'ID Bewijs';
 
   if (isId) {
@@ -1263,27 +1419,6 @@ function getVerificationStage(status) {
   if (normalized === 'OFFSHORE_READY') return 3;
   if (normalized === 'VERIFIED_ENTITY') return 2;
   return 1;
-}
-
-function isGate2Type(type) {
-  return GATE2_TYPES.includes(String(type || '').toUpperCase());
-}
-
-function isGate2Unlocked() {
-  const status = String(currentCompany?.verification_status || '').toUpperCase();
-  return status === 'VERIFIED_ENTITY' || status === 'OFFSHORE_READY' || !!currentCompany?.compliance_gate_passed;
-}
-
-function renderGate2LockNotice() {
-  const notice = document.getElementById('gate2LockNotice');
-  if (!notice) return;
-  if (isGate2Unlocked()) {
-    notice.classList.add('hidden');
-    notice.textContent = '';
-    return;
-  }
-  notice.classList.remove('hidden');
-  notice.textContent = 'Complete your Corporate Baseline (KKF/Tax) to unlock this section.';
 }
 
 function maybeUploadPendingIdDocument() {

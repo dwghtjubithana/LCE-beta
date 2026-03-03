@@ -154,6 +154,54 @@
         <span class="font-medium" id="toastMsg">Bericht</span>
     </div>
 
+    <div id="complianceProgressModal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm p-4">
+        <div class="max-w-xl mx-auto mt-16 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+                <div>
+                    <h3 id="complianceProgressTitle" class="text-lg font-bold text-slate-800">Voortgang</h3>
+                    <p id="complianceProgressSubtitle" class="text-sm text-slate-500">Update</p>
+                </div>
+                <button type="button" id="complianceProgressClose" class="text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="px-6 py-5 space-y-5">
+                <div id="complianceResultWrap" class="hidden rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-semibold text-slate-700">Laatste upload status</p>
+                        <span id="complianceResultStatus" class="text-xs font-semibold px-2 py-1 rounded-full bg-slate-200 text-slate-700">--</span>
+                    </div>
+                    <p id="complianceResultReason" class="text-xs text-slate-600 mt-2"></p>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between text-sm font-semibold text-slate-700">
+                        <span id="complianceCurrentLevelLabel">Level</span>
+                        <span id="complianceCurrentPercent">0%</span>
+                    </div>
+                    <div class="mt-2 h-2 rounded-full bg-slate-200 overflow-hidden">
+                        <div id="complianceCurrentBar" class="h-2 bg-blue-600 transition-all" style="width:0%"></div>
+                    </div>
+                    <p id="complianceCurrentMeta" class="text-xs text-slate-500 mt-2"></p>
+                    <p id="complianceCurrentMissing" class="text-xs text-slate-600 mt-1"></p>
+                </div>
+                <div id="complianceNextWrap" class="hidden border-t border-slate-100 pt-4">
+                    <div class="flex items-center justify-between text-sm font-semibold text-slate-700">
+                        <span id="complianceNextLevelLabel">Volgend level</span>
+                        <span id="complianceNextPercent">0%</span>
+                    </div>
+                    <div class="mt-2 h-2 rounded-full bg-slate-200 overflow-hidden">
+                        <div id="complianceNextBar" class="h-2 bg-emerald-600 transition-all" style="width:0%"></div>
+                    </div>
+                    <p id="complianceNextMeta" class="text-xs text-slate-500 mt-2"></p>
+                    <p id="complianceNextMissing" class="text-xs text-slate-600 mt-1"></p>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-100 flex justify-end">
+                <button type="button" id="complianceProgressOk" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">Sluiten</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const mobileBtn = document.getElementById('mobileMenuBtn');
         const mobileMenu = document.getElementById('mobileMenu');

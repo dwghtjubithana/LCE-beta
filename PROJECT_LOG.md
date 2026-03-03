@@ -3,6 +3,9 @@
 Chronological record of changes. Append newest entries at the top.
 
 ## Unreleased
+- 2026-03-02 — Phase 5/6 — Removed hardcoded level gating from uploads, switched to admin-driven current-level categories (required + optional), and added popup result reason for invalid uploads.
+- 2026-03-02 — Phase 5/6 — Added level-based compliance progress (current + next), admin `required_levels` support, and user upload completion popup with missing-doc guidance.
+- 2026-03-02 — Phase 5/6 — Synced dashboard and upload categories via dynamic requirement service; added admin-configurable required-document/company-type constraints and business-type enforcement.
 - 2026-02-03 — Fix — Payment proof file streaming now uses local disk; pending status persists in UI.
 - 2026-02-03 — UX — Added payment proof preview for users (image or link).
 - 2026-02-03 — Fix — Profile photo preview now uses auth fetch; geocode falls back to client-side.

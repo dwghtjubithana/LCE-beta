@@ -7,9 +7,14 @@ use App\Models\Document;
 
 class ScoreService
 {
-    public function calculate(Company $company): array
+    public function __construct(private DocumentRequirementService $requirements)
     {
-        $requiredTypes = Company::REQUIRED_DOC_TYPES;
+    }
+
+    public function calculate(Company $company, ?string $level = null): array
+    {
+        $level = $this->requirements->normalizeLevel($level);
+        $requiredTypes = $this->requirements->requiredTypesForCompany($company, $level);
         $validDocs = Document::query()
             ->where('company_id', $company->id)
             ->where('status', 'VALID')
@@ -17,13 +22,14 @@ class ScoreService
             ->count();
 
         $totalRequired = count($requiredTypes);
-        $score = $totalRequired > 0 ? (int) floor(($validDocs / $totalRequired) * 100) : 0;
+        $score = $totalRequired > 0 ? (int) floor(($validDocs / $totalRequired) * 100) : 100;
 
         return [
             'score' => $score,
             'valid_count' => $validDocs,
             'total_required' => $totalRequired,
             'required_types' => $requiredTypes,
+            'level' => $level,
         ];
     }
 }
