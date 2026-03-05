@@ -20,6 +20,10 @@ class CreateCompanyRequest extends BaseRequest
             'contact.email' => 'nullable|email|max:255',
             'contact.phone' => 'nullable|string|max:30',
             'contact.address' => 'nullable|string|max:255',
+            'contact.website' => 'nullable|url|max:255',
+            'contact.whatsapp' => 'nullable|url|max:255',
+            'contact.facebook' => 'nullable|url|max:255',
+            'contact.linkedin' => 'nullable|url|max:255',
         ];
     }
 }

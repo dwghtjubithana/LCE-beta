@@ -286,6 +286,9 @@
                 <a href="/admin/audit-logs" class="{{ ($active ?? '') === 'logs' ? 'active' : '' }}">Audit Logs</a>
                 <a href="/admin/system" class="{{ ($active ?? '') === 'system' ? 'active' : '' }}">Systeemstatus</a>
                 <a href="/admin/ai-settings" class="{{ ($active ?? '') === 'ai-settings' ? 'active' : '' }}">AI-instellingen</a>
+                <a href="/admin/email-settings" class="{{ ($active ?? '') === 'email-settings' ? 'active' : '' }}">Email-instellingen</a>
+                <a href="/admin/auth-providers" class="{{ ($active ?? '') === 'auth-providers' ? 'active' : '' }}">Auth providers</a>
+                <a href="/admin/plans" class="{{ ($active ?? '') === 'plans' ? 'active' : '' }}">Plan catalog</a>
             </nav>
             <div class="sidebar-footer">
                 <button class="btn secondary" id="btn-logout">Sign out</button>

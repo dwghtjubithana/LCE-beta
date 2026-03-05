@@ -62,7 +62,6 @@
                 </div>
             </div>
             <div id="uploadError" class="hidden mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
-            <div id="geminiHealth" class="mt-3 text-xs text-slate-500"></div>
         </div>
 
         <div class="overflow-x-auto">

@@ -49,10 +49,16 @@ const SCORE_DOC_META = {
   },
 };
 
+function getInputValue(id) {
+  const el = document.getElementById(id);
+  return el ? String(el.value || '').trim() : '';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
   initUploadUi();
   initComplianceProgressModal();
+  loadAuthProviders();
 
   // Strikte auth check
   if (authToken) {
@@ -62,6 +68,40 @@ document.addEventListener('DOMContentLoaded', () => {
     showLoginModal();
   }
 });
+
+async function loadAuthProviders() {
+  const wrap = document.getElementById('oauthButtons');
+  const googleBtn = document.getElementById('googleLoginBtn');
+  const microsoftBtn = document.getElementById('microsoftLoginBtn');
+  if (!wrap || !googleBtn || !microsoftBtn) return;
+  try {
+    const res = await fetch(`${API_BASE}/auth/providers`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return;
+    const providers = data?.providers || {};
+    const google = providers.google || {};
+    const microsoft = providers.microsoft || {};
+    let any = false;
+
+    if (google.enabled && google.start_url) {
+      googleBtn.href = google.start_url;
+      googleBtn.classList.remove('hidden');
+      any = true;
+    } else {
+      googleBtn.classList.add('hidden');
+    }
+    if (microsoft.enabled && microsoft.start_url) {
+      microsoftBtn.href = microsoft.start_url;
+      microsoftBtn.classList.remove('hidden');
+      any = true;
+    } else {
+      microsoftBtn.classList.add('hidden');
+    }
+    wrap.classList.toggle('hidden', !any);
+  } catch (err) {
+    // ignore
+  }
+}
 
 function initComplianceProgressModal() {
   const closeBtn = document.getElementById('complianceProgressClose');
@@ -235,7 +275,8 @@ async function initializeSession() {
     fetchNotifications();
     fetchPaymentProofPreview();
     fetchPaymentProofStatus();
-    checkGeminiHealth();
+    fetchPaymentSettings();
+    fetchPlanCatalogCards();
   } catch (err) {
     console.error(err);
     handleLogout(); // Bij twijfel: uitloggen
@@ -250,12 +291,22 @@ companyProfileForm.addEventListener('submit', async (e) => {
   const btn = document.getElementById('saveProfileBtn');
 
   const payload = {
-    company_name: document.getElementById('companyNameInput').value.trim(),
-    sector: document.getElementById('companySectorInput').value.trim(),
-    experience: document.getElementById('companyExperienceInput').value.trim(),
+    company_name: getInputValue('companyNameInput'),
+    sector: getInputValue('companySectorInput'),
+    experience: getInputValue('companyExperienceInput'),
     contact: {
-      email: document.getElementById('companyContactInput').value.trim(),
+      email: getInputValue('companyContactInput'),
+      phone: currentCompany?.contact?.phone || null,
+      website: getInputValue('companyWebsiteInput') || null,
+      whatsapp: getInputValue('companyWhatsappInput') || null,
+      facebook: getInputValue('companyFacebookInput') || null,
+      linkedin: getInputValue('companyLinkedinInput') || null,
     },
+    public_slug: getInputValue('publicSlugInput').toLowerCase() || null,
+    display_name: getInputValue('displayNameInput') || null,
+    address: getInputValue('addressInput') || null,
+    lat: getInputValue('latInput') || null,
+    lng: getInputValue('lngInput') || null,
   };
 
   btn.disabled = true;
@@ -302,11 +353,7 @@ digitalIdForm.addEventListener('submit', async (e) => {
   const btn = document.getElementById('saveDigitalIdBtn');
 
   const payload = {
-    public_slug: document.getElementById('publicSlugInput').value.trim().toLowerCase(),
-    display_name: document.getElementById('displayNameInput').value.trim(),
-    address: document.getElementById('addressInput').value.trim(),
-    lat: document.getElementById('latInput').value.trim() || null,
-    lng: document.getElementById('lngInput').value.trim() || null,
+    public_slug: getInputValue('publicSlugInput').toLowerCase(),
   };
 
   btn.disabled = true;
@@ -386,9 +433,19 @@ loginForm.addEventListener('submit', async (e) => {
       body: JSON.stringify({ email, password })
     });
 
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.message || 'Ongeldige inloggegevens');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (data?.code === 'EMAIL_NOT_VERIFIED' && email) {
+        try {
+          await fetch(`${API_BASE}/auth/resend-verification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+        } catch {}
+      }
+      throw new Error(data?.message || 'Ongeldige inloggegevens');
+    }
     if (!data.token) throw new Error('Geen token ontvangen van server');
 
     authToken = data.token;
@@ -638,7 +695,7 @@ function normalizeDocType(type) {
 
 function nextActionForStatus(status, typeKey) {
   if (status === 'MISSING') return `Upload dit document (${typeKey.replace(/_/g, ' ')}).`;
-  if (status === 'PROCESSING') return 'Wacht op AI-verwerking en controleer straks opnieuw.';
+  if (status === 'PROCESSING') return 'Wacht op automatische verwerking en controleer straks opnieuw.';
   if (status === 'MANUAL_REVIEW' || status === 'NEEDS_CONFIRMATION' || status === 'EXPIRING' || status === 'EXPIRING_SOON') {
     return 'Open het document en volg de aanbevolen actie of upload een betere versie.';
   }
@@ -700,7 +757,7 @@ async function fetchDocuments() {
       const docId = doc.id || doc.uuid || Math.random().toString(36).slice(2);
       const aiReason = escapeHtml(doc.extracted_data?.ai_reason || '');
       const aiFix = escapeHtml(doc.extracted_data?.ai_fix || '');
-      const aiFeedback = escapeHtml(doc.ai_feedback || 'Geen AI-advies beschikbaar.');
+      const aiFeedback = escapeHtml(doc.ai_feedback || 'Geen scanadvies beschikbaar.');
       const summary = doc.extracted_data?.ai_summary;
       const summaryHtml = renderSummary(summary, aiFeedback);
       const detectedType = escapeHtml(doc.detected_type || doc.category_selected || 'Onbekend');
@@ -740,11 +797,11 @@ async function fetchDocuments() {
               </div>
               <div>
                 <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Confidence</p>
-                <p class="font-medium text-slate-700">OCR: ${ocr} · AI: ${formatAiConfidence(doc)}</p>
+                <p class="font-medium text-slate-700">OCR: ${ocr} · Match: ${formatAiConfidence(doc)}</p>
               </div>
             </div>
             <div class="mt-3 p-3 rounded-lg border border-slate-200 bg-white">
-              <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">AI Advies</p>
+              <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Scanadvies</p>
               ${summaryHtml}
               ${aiReason ? `<p class=\"text-xs text-slate-500 mt-2\">Reden: ${aiReason}</p>` : ''}
               ${aiFix ? `<p class=\"text-xs text-slate-500 mt-1\">Fix: ${aiFix}</p>` : ''}
@@ -853,9 +910,9 @@ async function handleFileUpload(file, options = {}) {
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
       if (res.status === 403 && errData.code === 'PLAN_RESTRICTED') {
-        showToast('Upgrade nodig voor AI-analyse.', 'error');
+        showToast('Upgrade nodig voor automatische controle.', 'error');
         showUpgradePanelNotice();
-        setUploadError('AI-analyse vereist een Pro-plan. Upload je betaalbewijs om te upgraden.');
+        setUploadError('Automatische controle vereist een upgrade. Upload je betaalbewijs om te upgraden.');
         return;
       }
       const msg = formatApiError(errData, 'Uploaden mislukt. Probeer opnieuw.');
@@ -864,12 +921,12 @@ async function handleFileUpload(file, options = {}) {
     }
 
     const data = await res.json().catch(() => ({}));
-    setUploadProgress(85, 'AI-analyse verwerken...');
+    setUploadProgress(85, 'Automatische controle verwerken...');
     const status = data?.document?.status || data?.document?.ui_label || '';
     if (status && String(status).toUpperCase() !== 'PROCESSING') {
-      showToast(`Bestand geüpload. AI-analyse klaar (${status}).`, 'success');
+      showToast(`Bestand geüpload. Controle klaar (${status}).`, 'success');
     } else {
-      showToast('Bestand geüpload. AI-analyse gestart.', 'success');
+      showToast('Bestand geüpload. Controle gestart.', 'success');
     }
     setUploadError('');
     setUploadProgress(100, 'Klaar.');
@@ -929,7 +986,7 @@ function formatApiError(errData, fallback) {
   const message = (errData.message || '').toString();
 
   const codeMap = {
-    PLAN_RESTRICTED: 'AI-analyse vereist een Pro-plan. Upload je betaalbewijs om te upgraden.',
+    PLAN_RESTRICTED: 'Automatische controle vereist een upgrade. Upload je betaalbewijs om te upgraden.',
     NOT_FOUND: 'Document niet gevonden.',
     INVALID_FILE: 'Het bestand is ongeldig. Probeer een andere upload.',
     LOW_OCR_CONFIDENCE: 'De foto is te donker of onleesbaar. Probeer een scherpere foto.',
@@ -959,31 +1016,6 @@ function setUploadError(message) {
   el.textContent = message;
   el.classList.remove('hidden');
 }
-
-async function checkGeminiHealth() {
-  const el = document.getElementById('geminiHealth');
-  if (!el) return;
-  try {
-    const res = await fetch(`${API_BASE}/gemini/health`, {
-      headers: { 'Authorization': `Bearer ${authToken}` }
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      el.textContent = 'AI-status: niet beschikbaar.';
-      return;
-    }
-    const status = data?.result?.status || 'unknown';
-    const message = data?.result?.message || '';
-    if (status === 'ok') {
-      el.textContent = `AI-status: verbonden. ${message}`;
-    } else {
-      el.textContent = `AI-status: fout. ${message}`;
-    }
-  } catch (err) {
-    el.textContent = 'AI-status: fout bij verbinden.';
-  }
-}
-
 
 function setUploadBusy(isBusy) {
   const uploadBtn = document.getElementById('uploadBtn');
@@ -1118,7 +1150,7 @@ function showComplianceProgressPopup(progress, uploadResult = null) {
       resultReason.textContent = uploadResult.reason || 'Controle door gebruiker of admin vereist.';
     } else if (normalized === 'PROCESSING') {
       resultStatus.classList.add('bg-blue-100', 'text-blue-700');
-      resultReason.textContent = 'AI-verwerking loopt nog. Ververs later voor het definitieve resultaat.';
+      resultReason.textContent = 'Verwerking loopt nog. Ververs later voor het definitieve resultaat.';
     } else {
       resultStatus.classList.add('bg-slate-200', 'text-slate-700');
       resultReason.textContent = uploadResult.reason || 'Status bijgewerkt.';
@@ -1177,10 +1209,18 @@ function populateCompanyForm(company) {
   const sectorEl = document.getElementById('companySectorInput');
   const expEl = document.getElementById('companyExperienceInput');
   const contactEl = document.getElementById('companyContactInput');
+  const websiteEl = document.getElementById('companyWebsiteInput');
+  const whatsappEl = document.getElementById('companyWhatsappInput');
+  const facebookEl = document.getElementById('companyFacebookInput');
+  const linkedinEl = document.getElementById('companyLinkedinInput');
   if (nameEl) nameEl.value = company.company_name || '';
   if (sectorEl) sectorEl.value = company.sector || '';
   if (expEl) expEl.value = company.experience || '';
   if (contactEl) contactEl.value = company.contact?.email || '';
+  if (websiteEl) websiteEl.value = company.contact?.website || '';
+  if (whatsappEl) whatsappEl.value = company.contact?.whatsapp || '';
+  if (facebookEl) facebookEl.value = company.contact?.facebook || '';
+  if (linkedinEl) linkedinEl.value = company.contact?.linkedin || '';
 }
 
 function populateDigitalIdForm(company) {
@@ -1210,6 +1250,19 @@ function populateDigitalIdForm(company) {
       preview.classList.add('hidden');
     }
   }
+
+  const namePreview = document.getElementById('digitalPreviewName');
+  const addressPreview = document.getElementById('digitalPreviewAddress');
+  const websitePreview = document.getElementById('digitalPreviewWebsite');
+  const whatsappPreview = document.getElementById('digitalPreviewWhatsapp');
+  const facebookPreview = document.getElementById('digitalPreviewFacebook');
+  const linkedinPreview = document.getElementById('digitalPreviewLinkedin');
+  if (namePreview) namePreview.textContent = company.display_name || company.company_name || '--';
+  if (addressPreview) addressPreview.textContent = company.address || '--';
+  if (websitePreview) websitePreview.textContent = company.contact?.website || '--';
+  if (whatsappPreview) whatsappPreview.textContent = company.contact?.whatsapp || '--';
+  if (facebookPreview) facebookPreview.textContent = company.contact?.facebook || '--';
+  if (linkedinPreview) linkedinPreview.textContent = company.contact?.linkedin || '--';
 }
 
 const companyCreateForm = document.getElementById('companyCreateForm');
@@ -1514,7 +1567,7 @@ function renderManualReviewNotice(doc) {
   return `
     <div class="mt-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
       <strong>Handmatige controle nodig.</strong>
-      <div>${escapeHtml(doc.ai_feedback || 'De AI kon dit document niet betrouwbaar valideren.')}</div>
+      <div>${escapeHtml(doc.ai_feedback || 'De automatische controle kon dit document niet betrouwbaar valideren.')}</div>
     </div>
   `;
 }
@@ -1754,7 +1807,7 @@ function updatePlanBadges(user) {
 function showUpgradePanelNotice() {
   const panel = document.getElementById('paymentStatus');
   if (!panel) return;
-  panel.textContent = 'AI-analyse vereist een Pro-plan. Upload je betaalbewijs om te upgraden.';
+  panel.textContent = 'Automatische controle vereist een upgrade. Upload je betaalbewijs om te upgraden.';
 }
 
 async function handlePaymentProof(e) {
@@ -1839,6 +1892,57 @@ async function fetchPaymentProofStatus() {
     }
   } catch (err) {
     // best-effort
+  }
+}
+
+async function fetchPaymentSettings() {
+  const bankNameEl = document.getElementById('paymentBankName');
+  const bankAccountEl = document.getElementById('paymentBankAccount');
+  const bankAccountNameEl = document.getElementById('paymentBankAccountName');
+  if (!bankNameEl && !bankAccountEl && !bankAccountNameEl) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/payment`, {
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json().catch(() => ({}));
+    const s = data?.settings || {};
+    if (bankNameEl) bankNameEl.textContent = `Bank: ${s.payment_bank_name || '-'}`;
+    if (bankAccountEl) bankAccountEl.textContent = `Rekening: ${s.payment_bank_account || '-'}`;
+    if (bankAccountNameEl) bankAccountNameEl.textContent = `Naam: ${s.payment_bank_account_name || '-'}`;
+  } catch {
+    // best effort
+  }
+}
+
+async function fetchPlanCatalogCards() {
+  const wrap = document.getElementById('planCatalogCards');
+  if (!wrap) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/plans`);
+    if (!res.ok) return;
+    const data = await res.json().catch(() => ({}));
+    const plans = Array.isArray(data?.plans) ? data.plans : [];
+    if (!plans.length) return;
+
+    const currentPlan = String((currentUser?.plan || '')).toUpperCase();
+    wrap.innerHTML = plans.map((plan) => {
+      const key = String(plan.plan_key || '').toUpperCase();
+      const label = plan.plan_label || key || 'PLAN';
+      const description = plan.description || 'Geen beschrijving ingesteld.';
+      const isCurrent = currentPlan !== '' && key === currentPlan;
+      return `
+        <div class="p-4 rounded-xl border ${isCurrent ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white'}">
+          <h4 class="font-bold text-slate-800">${escapeHtml(key)}</h4>
+          <p class="text-sm text-slate-500 mt-1">${escapeHtml(label)}</p>
+          <p class="text-xs text-slate-400 mt-2">${escapeHtml(description)}</p>
+        </div>
+      `;
+    }).join('');
+  } catch {
+    // best effort
   }
 }
 

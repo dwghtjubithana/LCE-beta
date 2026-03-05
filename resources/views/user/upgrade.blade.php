@@ -10,37 +10,23 @@
         <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
             <div>
                 <h3 class="font-bold text-slate-800 text-lg">Upgrade & Betaling</h3>
-                <p class="text-sm text-slate-500">Upgrade om AI‑analyse en extra functies te ontgrendelen.</p>
+                <p class="text-sm text-slate-500">Upgrade om automatische controle en extra functies te ontgrendelen.</p>
             </div>
             <div class="flex items-center gap-2">
                 <span class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-200 text-slate-700" id="planBadge">PLAN: FREE</span>
                 <span class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-200 text-slate-700" id="planStatusBadge">STATUS: ACTIVE</span>
             </div>
         </div>
-        <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div class="p-4 rounded-xl border border-slate-200 bg-white">
-                <h4 class="font-bold text-slate-800">FREE</h4>
-                <p class="text-sm text-slate-500 mt-1">Uploaden en basisstatus</p>
-                <p class="text-xs text-slate-400 mt-2">AI‑analyse: geblokkeerd</p>
-            </div>
-            <div class="p-4 rounded-xl border border-slate-200 bg-white">
-                <h4 class="font-bold text-slate-800">BUSINESS</h4>
-                <p class="text-sm text-slate-500 mt-1">Gate 1 verificatie (Corporate Baseline)</p>
-                <p class="text-xs text-slate-400 mt-2">KKF/CRIB/UBO checks</p>
-            </div>
-            <div class="p-4 rounded-xl border border-slate-200 bg-white">
-                <h4 class="font-bold text-slate-800">ENTERPRISE</h4>
-                <p class="text-sm text-slate-500 mt-1">Gate 2 analysis + volledige tenders</p>
-                <p class="text-xs text-slate-400 mt-2">IOGP-423 readiness</p>
-            </div>
+        <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-4" id="planCatalogCards">
+            <div class="p-4 rounded-xl border border-slate-200 bg-white text-sm text-slate-500">Plannen laden...</div>
         </div>
         <div class="p-6 border-t border-slate-100">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
                     <p class="text-sm font-semibold text-slate-700">Bankgegevens</p>
-                    <p class="text-sm text-slate-500 mt-1">Bank: TCB</p>
-                    <p class="text-sm text-slate-500">Rekening: 12.34.56.789</p>
-                    <p class="text-sm text-slate-500">Naam: Wapcomtek NV</p>
+                    <p class="text-sm text-slate-500 mt-1" id="paymentBankName">Bank: -</p>
+                    <p class="text-sm text-slate-500" id="paymentBankAccount">Rekening: -</p>
+                    <p class="text-sm text-slate-500" id="paymentBankAccountName">Naam: -</p>
                     <p class="text-xs text-slate-400 mt-2">Stuur een screenshot van je betaling hieronder.</p>
                 </div>
                 <div class="p-4 rounded-xl border border-slate-200 bg-white">

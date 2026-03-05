@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PaymentProof;
+use App\Models\PlanCatalog;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,7 @@ class AdminPaymentProofController extends Controller
         return response()->json([
             'status' => 'success',
             'payment_proofs' => $proofs,
+            'target_level_options' => $this->targetLevelOptions(),
         ]);
     }
 
@@ -34,11 +36,15 @@ class AdminPaymentProofController extends Controller
             ], 404);
         }
 
-        $targetLevel = strtoupper((string) $request->input('target_level', 'BUSINESS'));
-        if (!in_array($targetLevel, ['BUSINESS', 'ENTERPRISE'], true)) {
+        $options = $this->targetLevelOptions();
+        $allowedKeys = array_map(fn ($opt) => (string) ($opt['plan_key'] ?? ''), $options);
+        $fallback = $allowedKeys[0] ?? 'BUSINESS';
+
+        $targetLevel = strtoupper((string) $request->input('target_level', $fallback));
+        if (!in_array($targetLevel, $allowedKeys, true)) {
             return response()->json([
                 'code' => 'VALIDATION_ERROR',
-                'message' => 'Target level must be BUSINESS or ENTERPRISE.',
+                'message' => 'Target level is not allowed.',
             ], 422);
         }
 
@@ -84,7 +90,7 @@ class AdminPaymentProofController extends Controller
 
         $user = User::find($proof->user_id);
         if ($user) {
-            $user->plan = $user->plan ?: 'FREE';
+            $user->plan = $user->plan ?: $this->defaultPlanKey();
             $user->plan_status = 'ACTIVE';
             $user->save();
         }
@@ -102,5 +108,38 @@ class AdminPaymentProofController extends Controller
     private function authUser(): User
     {
         return request()->attributes->get('auth_user');
+    }
+
+    private function targetLevelOptions(): array
+    {
+        $plans = PlanCatalog::query()
+            ->where('is_active', true)
+            ->where('available_for_upgrade', true)
+            ->where('requires_payment_proof', true)
+            ->orderBy('rank')
+            ->get(['plan_key', 'plan_label', 'rank']);
+
+        if ($plans->isEmpty()) {
+            return [
+                ['plan_key' => 'BUSINESS', 'plan_label' => 'Business', 'rank' => 30],
+                ['plan_key' => 'ENTERPRISE', 'plan_label' => 'Enterprise', 'rank' => 40],
+            ];
+        }
+
+        return $plans->map(fn ($plan) => [
+            'plan_key' => strtoupper((string) $plan->plan_key),
+            'plan_label' => (string) $plan->plan_label,
+            'rank' => (int) $plan->rank,
+        ])->values()->all();
+    }
+
+    private function defaultPlanKey(): string
+    {
+        $key = PlanCatalog::query()
+            ->where('is_active', true)
+            ->where('is_default', true)
+            ->value('plan_key');
+        $key = strtoupper(trim((string) $key));
+        return $key !== '' ? $key : 'FREE';
     }
 }

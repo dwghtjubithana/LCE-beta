@@ -53,6 +53,7 @@ function renderProfile(profile) {
   }
 
   renderMap(profile);
+  renderSocialLinks(profile);
 }
 
 function renderMap(profile) {
@@ -70,4 +71,40 @@ function renderMap(profile) {
 function setText(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
+}
+
+function renderSocialLinks(profile) {
+  const wrap = document.getElementById('socialLinks');
+  if (!wrap) return;
+
+  const contact = profile.contact || {};
+  const links = [
+    { key: 'website', label: 'Website', icon: 'globe' },
+    { key: 'whatsapp', label: 'WhatsApp', icon: 'message-circle' },
+    { key: 'facebook', label: 'Facebook', icon: 'facebook' },
+    { key: 'linkedin', label: 'LinkedIn', icon: 'linkedin' },
+  ].filter((item) => contact[item.key]);
+
+  if (!links.length) {
+    wrap.innerHTML = '<span class="status">Geen sociale links beschikbaar.</span>';
+    return;
+  }
+
+  wrap.innerHTML = links.map((item) => `
+    <a class="social-link" href="${escapeHtml(contact[item.key])}" target="_blank" rel="noopener">
+      <i data-lucide="${item.icon}"></i> ${item.label}
+    </a>
+  `).join('');
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

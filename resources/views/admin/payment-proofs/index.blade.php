@@ -35,6 +35,10 @@
 <script>
     AdminApp.requireAuth();
     AdminApp.initTopbar();
+    let targetLevelOptions = [
+        { plan_key: 'BUSINESS', plan_label: 'Business' },
+        { plan_key: 'ENTERPRISE', plan_label: 'Enterprise' },
+    ];
 
     function renderTable(rows) {
         if (!rows.length) {
@@ -47,12 +51,14 @@
                 <td>${p.user_id || '-'}</td>
                 <td>${p.company_id || '-'}</td>
                 <td>${p.status || '-'}</td>
-                <td>${p.target_level || 'BUSINESS'}</td>
+                <td>${p.target_level || (targetLevelOptions[0]?.plan_key || 'BUSINESS')}</td>
                 <td>${AdminApp.formatDateTime(p.submitted_at)}</td>
                 <td class="actions">
                     <select class="input" data-target-level="${p.id}" style="max-width: 140px;">
-                        <option value="BUSINESS" ${(p.target_level || 'BUSINESS') === 'BUSINESS' ? 'selected' : ''}>Level 2</option>
-                        <option value="ENTERPRISE" ${(p.target_level || '') === 'ENTERPRISE' ? 'selected' : ''}>Level 3</option>
+                        ${targetLevelOptions.map((opt) => {
+                            const selected = (p.target_level || targetLevelOptions[0]?.plan_key || '') === opt.plan_key;
+                            return `<option value="${opt.plan_key}" ${selected ? 'selected' : ''}>${opt.plan_label || opt.plan_key}</option>`;
+                        }).join('')}
                     </select>
                     <button class="btn secondary" data-action="approve" data-id="${p.id}">Approve</button>
                     <button class="btn secondary" data-action="reject" data-id="${p.id}">Reject</button>
@@ -87,6 +93,9 @@
             document.getElementById('proofs-table').innerHTML = `<div class="status">${data.message || 'Failed to load proofs.'}</div>`;
             return;
         }
+        targetLevelOptions = Array.isArray(data.target_level_options) && data.target_level_options.length
+            ? data.target_level_options
+            : targetLevelOptions;
         let rows = data.payment_proofs || [];
         if (status) rows = rows.filter(r => (r.status || '').toUpperCase() === status);
         if (search) rows = rows.filter(r => String(r.user_id || '').includes(search) || (r.status || '').toUpperCase().includes(search.toUpperCase()));
@@ -97,7 +106,7 @@
         const payload = {};
         if (action === 'approve') {
             const levelEl = document.querySelector(`[data-target-level="${id}"]`);
-            payload.target_level = levelEl?.value || 'BUSINESS';
+            payload.target_level = levelEl?.value || (targetLevelOptions[0]?.plan_key || 'BUSINESS');
         }
         const res = await AdminApp.api(`/api/admin/payment-proofs/${id}/${action}`, {
             method: 'POST',

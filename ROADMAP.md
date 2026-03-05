@@ -54,6 +54,7 @@ High-level planning by phase. Update when scope or sequencing changes.
 - Real tender scraping/ingestion adapters
 - Real notification delivery (email/push provider integration)
 - User confirmation flow for uncertain classification
+- Registration email verification token persistence + verification endpoint flow
 
 ## Maintenance
 - Keep OpenAPI synced with admin endpoints

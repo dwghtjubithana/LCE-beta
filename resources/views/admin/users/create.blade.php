@@ -48,11 +48,7 @@
         </div>
         <div class="form-field">
             <label for="user-plan">Plan</label>
-            <select id="user-plan">
-                <option value="FREE">Free</option>
-                <option value="BUSINESS">Business</option>
-                <option value="ENTERPRISE">Enterprise</option>
-            </select>
+            <select id="user-plan"></select>
         </div>
         <div class="form-field">
             <label for="user-plan-status">Plan status</label>
@@ -74,6 +70,29 @@
 <script>
     AdminApp.requireAuth();
     AdminApp.initTopbar();
+
+    async function loadPlans() {
+        const planEl = document.getElementById('user-plan');
+        const res = await AdminApp.api('/api/admin/plans?include_inactive=0');
+        const data = await AdminApp.readJson(res);
+        const plans = Array.isArray(data?.plans) ? data.plans : [];
+        if (!res.ok || !plans.length) {
+            planEl.innerHTML = `
+                <option value="FREE">Free</option>
+                <option value="PRO">Premium (PRO)</option>
+                <option value="BUSINESS">Business</option>
+                <option value="ENTERPRISE">Enterprise</option>
+            `;
+            return;
+        }
+        planEl.innerHTML = plans.map((plan) => (
+            `<option value="${plan.plan_key}">${plan.plan_label || plan.plan_key} (${plan.plan_key})</option>`
+        )).join('');
+        const defaultPlan = plans.find((p) => !!p.is_default) || plans[0];
+        if (defaultPlan?.plan_key) {
+            planEl.value = defaultPlan.plan_key;
+        }
+    }
 
     document.getElementById('btn-create').addEventListener('click', async () => {
         const statusEl = document.getElementById('create-status');
@@ -111,5 +130,7 @@
         AdminApp.setStatus(statusEl, 'User created successfully.', 'success');
         window.location.href = `/admin/users/${data.user.id}`;
     });
+
+    loadPlans();
 </script>
 @endsection

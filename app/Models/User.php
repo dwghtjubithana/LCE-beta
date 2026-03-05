@@ -22,11 +22,17 @@ class User extends Authenticatable
         'username',
         'email',
         'phone',
+        'oauth_provider',
+        'oauth_subject',
         'password_hash',
         'app_role',
         'status',
         'plan',
         'plan_status',
+        'email_verified_at',
+        'email_verification_token',
+        'email_verification_sent_at',
+        'email_verification_expires_at',
     ];
 
     /**
@@ -52,6 +58,9 @@ class User extends Authenticatable
     {
         return [
             'password_hash' => 'hashed',
+            'email_verified_at' => 'datetime',
+            'email_verification_sent_at' => 'datetime',
+            'email_verification_expires_at' => 'datetime',
         ];
     }
 }

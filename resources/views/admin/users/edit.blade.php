@@ -44,11 +44,7 @@
         </div>
         <div class="form-field">
             <label for="edit-plan">Plan</label>
-            <select id="edit-plan">
-                <option value="FREE">Free</option>
-                <option value="BUSINESS">Business</option>
-                <option value="ENTERPRISE">Enterprise</option>
-            </select>
+            <select id="edit-plan"></select>
         </div>
         <div class="form-field">
             <label for="edit-plan-status">Plan status</label>
@@ -72,6 +68,35 @@
     AdminApp.initTopbar();
 
     const userId = {{ $id }};
+    let loadedPlans = [];
+
+    async function loadPlans(selectedKey = null) {
+        const planEl = document.getElementById('edit-plan');
+        const res = await AdminApp.api('/api/admin/plans?include_inactive=1');
+        const data = await AdminApp.readJson(res);
+        loadedPlans = Array.isArray(data?.plans) ? data.plans : [];
+        if (!res.ok || !loadedPlans.length) {
+            planEl.innerHTML = `
+                <option value="FREE">Free</option>
+                <option value="PRO">Premium (PRO)</option>
+                <option value="BUSINESS">Business</option>
+                <option value="ENTERPRISE">Enterprise</option>
+            `;
+            planEl.value = selectedKey || 'FREE';
+            return;
+        }
+        planEl.innerHTML = loadedPlans.map((plan) => (
+            `<option value="${plan.plan_key}">${plan.plan_label || plan.plan_key} (${plan.plan_key})</option>`
+        )).join('');
+        if (selectedKey && Array.from(planEl.options).some((opt) => opt.value === selectedKey)) {
+            planEl.value = selectedKey;
+            return;
+        }
+        const defaultPlan = loadedPlans.find((p) => !!p.is_default) || loadedPlans[0];
+        if (defaultPlan?.plan_key) {
+            planEl.value = defaultPlan.plan_key;
+        }
+    }
 
     async function loadUser() {
         const statusEl = document.getElementById('edit-status-msg');
@@ -87,7 +112,7 @@
         document.getElementById('edit-phone').value = user.phone || '';
         document.getElementById('edit-role').value = user.app_role || 'user';
         document.getElementById('edit-status').value = user.status || 'ACTIVE';
-        document.getElementById('edit-plan').value = user.plan || 'FREE';
+        await loadPlans(user.plan || 'FREE');
         document.getElementById('edit-plan-status').value = user.plan_status || 'ACTIVE';
     }
 

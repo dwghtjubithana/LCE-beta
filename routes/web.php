@@ -38,6 +38,16 @@ Route::get('/tenders/{id}', function ($id) {
     return view('tenders.show', ['id' => $id]);
 });
 
+Route::get('/verify-email', function () {
+    return view('auth.verify-email');
+});
+Route::get('/auth/oauth/{provider}/start', [\App\Http\Controllers\AuthController::class, 'oauthStart'])
+    ->middleware('throttle:30,1')
+    ->where('provider', 'google|microsoft');
+Route::get('/auth/oauth/{provider}/callback', [\App\Http\Controllers\AuthController::class, 'oauthCallback'])
+    ->middleware('throttle:30,1')
+    ->where('provider', 'google|microsoft');
+
 Route::get('/p/{slug}', function ($slug) {
     return view('public.profile', ['slug' => $slug]);
 });
@@ -119,5 +129,14 @@ Route::middleware('admin.basic')->group(function () {
     });
     Route::get('/admin/ai-settings', function () {
         return view('admin.ai-settings', ['active' => 'ai-settings']);
+    });
+    Route::get('/admin/email-settings', function () {
+        return view('admin.email-settings', ['active' => 'email-settings']);
+    });
+    Route::get('/admin/auth-providers', function () {
+        return view('admin.auth-providers', ['active' => 'auth-providers']);
+    });
+    Route::get('/admin/plans', function () {
+        return view('admin.plans', ['active' => 'plans']);
     });
 });

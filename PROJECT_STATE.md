@@ -3,10 +3,10 @@
 Tracks the latest change plus the previous two changes.
 
 ## Latest change
-- Aligned level flow to admin-first rules: FREE uploads enabled, current-level-only upload categories (mandatory + optional), zero-required-level support, and popup with invalid reason.
+- Security hardening pass: protected SMTP secret exposure, added email verification flow (token + verify + resend + login gate), made upgrade bank details admin-managed, and restricted Gemini health endpoint to admin routes.
 
 ## Previous change
-- Added level-based requirements/progress (current + next level), admin `required_levels` controls, and upload completion progress popup.
+- Phase 4 started: Bedrijfsprofiel is now the source for Digital ID data (slug/display/address/socials/logo), Digital ID page is sync-first preview/publish, and public profile shows social channels.
 
 ## Prior change
-- Added dynamic document requirements (admin rules + company type), synced dashboard/upload categories, and enforced business-type checks.
+- Phase 3 started: added admin-managed email settings center (SMTP credentials, toggles, templates, test send, and delivery logs) with DB patch + API + admin UI.

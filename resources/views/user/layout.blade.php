@@ -33,6 +33,10 @@
                 <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-md shadow-blue-200 flex justify-center items-center gap-2">
                     Inloggen
                 </button>
+                <div id="oauthButtons" class="hidden pt-2 border-t border-slate-100 space-y-2">
+                    <a id="googleLoginBtn" href="#" class="hidden w-full text-center border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold py-2.5 rounded-lg transition">Inloggen met Google</a>
+                    <a id="microsoftLoginBtn" href="#" class="hidden w-full text-center border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold py-2.5 rounded-lg transition">Inloggen met Microsoft</a>
+                </div>
             </form>
         </div>
     </div>
@@ -137,6 +141,10 @@
                 <h2 class="text-lg font-bold text-slate-800">@yield('page_title')</h2>
             </div>
             <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <a href="/dashboard" class="px-3 py-1.5 rounded-lg border text-xs font-semibold transition {{ ($active ?? '') === 'dashboard' ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-100' }}">Dashboard</a>
+                    <a href="/documents" class="px-3 py-1.5 rounded-lg border text-xs font-semibold transition {{ ($active ?? '') === 'documents' ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-100' }}">Documenten</a>
+                </div>
                 <div id="connectionStatus" class="hidden text-xs font-medium px-2 py-1 rounded bg-green-100 text-green-700 flex items-center gap-1">
                     <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Verbonden
                 </div>

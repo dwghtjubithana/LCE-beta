@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\ComplianceRule;
+use App\Models\PlanCatalog;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 class ComplianceRuleController extends Controller
 {
@@ -58,6 +62,61 @@ class ComplianceRuleController extends Controller
         return response()->json([
             'status' => 'success',
             'rule' => $rule,
+        ]);
+    }
+
+    public function meta(): JsonResponse
+    {
+        $levels = $this->availablePlanKeys();
+        $sectors = ['general'];
+
+        try {
+            $sectorRows = ComplianceRule::query()
+                ->whereNotNull('sector_applicability')
+                ->pluck('sector_applicability')
+                ->all();
+            foreach ($sectorRows as $row) {
+                $decoded = is_array($row) ? $row : json_decode((string) $row, true);
+                if (!is_array($decoded)) {
+                    continue;
+                }
+                foreach ($decoded as $item) {
+                    $key = strtolower(trim((string) $item));
+                    if ($key !== '' && !in_array($key, $sectors, true)) {
+                        $sectors[] = $key;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
+        $companyTypes = [];
+        try {
+            if (Schema::hasTable('company_type_requirements')) {
+                $companyTypes = DB::table('company_type_requirements')
+                    ->orderBy('company_type_label')
+                    ->get(['company_type_key', 'company_type_label', 'requires_bedrijfsvergunning'])
+                    ->map(function ($row) {
+                        return [
+                            'key' => (string) ($row->company_type_key ?? ''),
+                            'label' => (string) ($row->company_type_label ?? ''),
+                            'requires_bedrijfsvergunning' => (bool) ($row->requires_bedrijfsvergunning ?? false),
+                        ];
+                    })
+                    ->values()
+                    ->all();
+            }
+        } catch (\Throwable $e) {
+            $companyTypes = [];
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'meta' => [
+                'levels' => $levels,
+                'sectors' => $sectors,
+                'company_types' => $companyTypes,
+            ],
         ]);
     }
 
@@ -138,9 +197,9 @@ class ComplianceRuleController extends Controller
 
         $data = $request->validate($rules);
 
-        $data['sector_applicability'] = $this->parseArray($request->input('sector_applicability'));
-        $data['required_keywords'] = $this->parseArray($request->input('required_keywords'));
-        $data['constraints'] = $this->parseJson($request->input('constraints'));
+        $data['sector_applicability'] = $this->normalizeStringArray($this->parseArray($request->input('sector_applicability')));
+        $data['required_keywords'] = $this->normalizeStringArray($this->parseArray($request->input('required_keywords')));
+        $data['constraints'] = $this->normalizeConstraints($this->parseJson($request->input('constraints')));
 
         return array_filter($data, fn ($value) => $value !== null);
     }
@@ -185,8 +244,140 @@ class ComplianceRuleController extends Controller
         return is_array($decoded) ? $decoded : null;
     }
 
+    private function normalizeStringArray(?array $values): ?array
+    {
+        if (!$values) {
+            return null;
+        }
+        $result = [];
+        foreach ($values as $item) {
+            $value = trim((string) $item);
+            if ($value === '') {
+                continue;
+            }
+            if (!in_array($value, $result, true)) {
+                $result[] = $value;
+            }
+        }
+        return $result ?: null;
+    }
+
+    private function normalizeConstraints(?array $constraints): ?array
+    {
+        if (!$constraints) {
+            return null;
+        }
+
+        $allowed = ['expiry_required', 'required_fields', 'required_document', 'company_type_keys', 'required_levels'];
+        $normalized = [];
+
+        if (array_key_exists('expiry_required', $constraints)) {
+            $val = $constraints['expiry_required'];
+            if ($val !== null && !is_bool($val)) {
+                throw ValidationException::withMessages([
+                    'constraints.expiry_required' => 'expiry_required must be boolean or null.',
+                ]);
+            }
+            $normalized['expiry_required'] = $val;
+        }
+
+        if (array_key_exists('required_document', $constraints)) {
+            $val = $constraints['required_document'];
+            if (!is_bool($val)) {
+                throw ValidationException::withMessages([
+                    'constraints.required_document' => 'required_document must be boolean.',
+                ]);
+            }
+            $normalized['required_document'] = $val;
+        }
+
+        if (array_key_exists('required_fields', $constraints)) {
+            if (!is_array($constraints['required_fields'])) {
+                throw ValidationException::withMessages([
+                    'constraints.required_fields' => 'required_fields must be an array.',
+                ]);
+            }
+            $normalized['required_fields'] = $this->normalizeStringArray($constraints['required_fields']);
+        }
+
+        if (array_key_exists('company_type_keys', $constraints)) {
+            if (!is_array($constraints['company_type_keys'])) {
+                throw ValidationException::withMessages([
+                    'constraints.company_type_keys' => 'company_type_keys must be an array.',
+                ]);
+            }
+            $keys = $this->normalizeStringArray($constraints['company_type_keys']) ?: [];
+            if ($keys && Schema::hasTable('company_type_requirements')) {
+                $existing = DB::table('company_type_requirements')
+                    ->whereIn('company_type_key', $keys)
+                    ->pluck('company_type_key')
+                    ->map(fn ($v) => (string) $v)
+                    ->all();
+                $missing = array_values(array_diff($keys, $existing));
+                if ($missing) {
+                    throw ValidationException::withMessages([
+                        'constraints.company_type_keys' => 'Unknown company_type_keys: ' . implode(', ', $missing),
+                    ]);
+                }
+            }
+            $normalized['company_type_keys'] = $keys ?: null;
+        }
+
+        if (array_key_exists('required_levels', $constraints)) {
+            if (!is_array($constraints['required_levels'])) {
+                throw ValidationException::withMessages([
+                    'constraints.required_levels' => 'required_levels must be an array.',
+                ]);
+            }
+            $levels = array_map(
+                fn ($value) => strtoupper(trim((string) $value)),
+                $constraints['required_levels']
+            );
+            $levels = array_values(array_filter($levels, fn ($value) => $value !== ''));
+            $levels = array_values(array_unique($levels));
+            $allowedLevels = $this->availablePlanKeys();
+            $invalid = array_values(array_diff($levels, $allowedLevels));
+            if ($invalid) {
+                throw ValidationException::withMessages([
+                    'constraints.required_levels' => 'Invalid levels: ' . implode(', ', $invalid),
+                ]);
+            }
+            $normalized['required_levels'] = $levels ?: null;
+        }
+
+        foreach ($constraints as $key => $_) {
+            if (!in_array((string) $key, $allowed, true)) {
+                $normalized[$key] = $constraints[$key];
+            }
+        }
+
+        return $normalized ?: null;
+    }
+
     private function authUser()
     {
         return request()->attributes->get('auth_user');
+    }
+
+    private function availablePlanKeys(): array
+    {
+        try {
+            if (Schema::hasTable('plan_catalog')) {
+                $keys = PlanCatalog::query()
+                    ->where('is_active', true)
+                    ->orderBy('rank')
+                    ->pluck('plan_key')
+                    ->map(fn ($key) => strtoupper(trim((string) $key)))
+                    ->filter(fn ($key) => $key !== '')
+                    ->values()
+                    ->all();
+                if ($keys) {
+                    return $keys;
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
+        return ['FREE', 'BUSINESS', 'ENTERPRISE', 'PRO'];
     }
 }

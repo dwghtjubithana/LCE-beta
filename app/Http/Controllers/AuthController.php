@@ -4,49 +4,69 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Models\EmailLog;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Services\EmailSettingsService;
 use App\Services\JwtService;
+use App\Services\OAuthService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    public function register(RegisterRequest $request, JwtService $jwt, AuditLogService $audit): JsonResponse
+    public function register(RegisterRequest $request, JwtService $jwt, AuditLogService $audit, EmailSettingsService $emailSettings): JsonResponse
     {
         $email = $this->normalizeEmail($request->input('email'));
         $phone = $this->normalizePhone($request->input('phone'));
         $username = $request->input('username') ?: $this->deriveUsername($email, $phone);
+        $verificationRequired = $this->verificationRequired($emailSettings, $email);
 
         $user = User::create([
             'uuid' => (string) Str::uuid(),
-            'username' => $username,
+            'username' => $this->ensureUniqueUsername($username),
             'email' => $email,
             'phone' => $phone,
             'password_hash' => Hash::make($request->input('password')),
             'app_role' => 'user',
             'status' => 'ACTIVE',
+            'email_verified_at' => $verificationRequired ? null : now(),
         ]);
 
-        $token = $jwt->createToken([
-            'sub' => $user->id,
-            'uid' => $user->uuid,
-        ], $this->jwtTtl());
+        if ($verificationRequired) {
+            $token = $this->issueEmailVerificationToken($user, $emailSettings);
+            $this->sendVerificationEmail($user, $token, $emailSettings);
+        }
+
+        $response = [
+            'status' => 'success',
+            'expires_in' => $this->jwtTtl() * 60,
+            'user' => $this->userPayload($user),
+            'verification_required' => $verificationRequired,
+        ];
+        if ($verificationRequired) {
+            $response['message'] = 'Registratie gelukt. Controleer je e-mail om je account te activeren.';
+        } else {
+            $token = $jwt->createToken([
+                'sub' => $user->id,
+                'uid' => $user->uuid,
+            ], $this->jwtTtl());
+            $response['token'] = $token;
+        }
 
         $audit->record($user, 'auth.register', 'user', $user->id, [
             'email' => $user->email,
+            'verification_required' => $verificationRequired,
         ]);
 
-        return response()->json([
-            'status' => 'success',
-            'token' => $token,
-            'expires_in' => $this->jwtTtl() * 60,
-            'user' => $this->userPayload($user),
-        ], 201);
+        return response()->json($response, 201);
     }
 
-    public function login(LoginRequest $request, JwtService $jwt, AuditLogService $audit): JsonResponse
+    public function login(LoginRequest $request, JwtService $jwt, AuditLogService $audit, EmailSettingsService $emailSettings): JsonResponse
     {
         $email = $this->normalizeEmail($request->input('email'));
         $phone = $this->normalizePhone($request->input('phone'));
@@ -66,6 +86,14 @@ class AuthController extends Controller
             ], 401);
         }
 
+        if ($this->verificationRequired($emailSettings, $user->email) && !$user->email_verified_at) {
+            return response()->json([
+                'code' => 'EMAIL_NOT_VERIFIED',
+                'message' => 'Please verify your email address before logging in.',
+                'verification_required' => true,
+            ], 403);
+        }
+
         $token = $jwt->createToken([
             'sub' => $user->id,
             'uid' => $user->uuid,
@@ -83,9 +111,164 @@ class AuthController extends Controller
         ]);
     }
 
+    public function verifyEmail(Request $request, AuditLogService $audit): JsonResponse
+    {
+        $payload = $request->validate([
+            'uid' => ['required', 'string', 'max:36'],
+            'token' => ['required', 'string', 'min:16', 'max:255'],
+        ]);
+
+        $user = User::where('uuid', $payload['uid'])->first();
+        if (!$user || !$user->email_verification_token) {
+            return response()->json([
+                'code' => 'INVALID_VERIFICATION_TOKEN',
+                'message' => 'Verification link is invalid.',
+            ], 422);
+        }
+
+        if ($user->email_verification_expires_at && now()->greaterThan($user->email_verification_expires_at)) {
+            return response()->json([
+                'code' => 'VERIFICATION_TOKEN_EXPIRED',
+                'message' => 'Verification link has expired.',
+            ], 422);
+        }
+
+        $tokenHash = hash('sha256', (string) $payload['token']);
+        if (!hash_equals((string) $user->email_verification_token, $tokenHash)) {
+            return response()->json([
+                'code' => 'INVALID_VERIFICATION_TOKEN',
+                'message' => 'Verification link is invalid.',
+            ], 422);
+        }
+
+        $user->email_verified_at = now();
+        $user->email_verification_token = null;
+        $user->email_verification_expires_at = null;
+        $user->save();
+
+        $audit->record($user, 'auth.email_verified', 'user', $user->id, [
+            'email' => $user->email,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Email verified successfully.',
+        ]);
+    }
+
+    public function resendVerification(Request $request, EmailSettingsService $emailSettings, AuditLogService $audit): JsonResponse
+    {
+        $payload = $request->validate([
+            'email' => ['required', 'email', 'max:150'],
+        ]);
+
+        $email = $this->normalizeEmail($payload['email']);
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'If this email exists, a verification email has been sent.',
+            ]);
+        }
+
+        if ($user->email_verified_at) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Email is already verified.',
+            ]);
+        }
+
+        $token = $this->issueEmailVerificationToken($user, $emailSettings);
+        $this->sendVerificationEmail($user, $token, $emailSettings);
+
+        $audit->record($user, 'auth.email_verification_resent', 'user', $user->id, [
+            'email' => $user->email,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Verification email sent.',
+        ]);
+    }
+
+    public function oauthStart(string $provider, OAuthService $oauth)
+    {
+        $provider = strtolower(trim($provider));
+        if (!in_array($provider, ['google', 'microsoft'], true)) {
+            abort(404);
+        }
+
+        $config = $oauth->providerConfig($provider);
+        if (!$config['enabled']) {
+            return redirect('/?oauth_error=provider_disabled');
+        }
+
+        $state = Str::random(48);
+        Cache::put('oauth_state_' . $state, $provider, now()->addMinutes(10));
+        $authUrl = $oauth->buildAuthorizeUrl($provider, $config, $state);
+
+        return redirect()->away($authUrl);
+    }
+
+    public function oauthCallback(Request $request, string $provider, OAuthService $oauth)
+    {
+        $provider = strtolower(trim($provider));
+        if (!in_array($provider, ['google', 'microsoft'], true)) {
+            abort(404);
+        }
+
+        if ($request->filled('error')) {
+            return view('auth.oauth-complete', [
+                'ok' => false,
+                'message' => (string) $request->query('error_description', 'OAuth login failed.'),
+                'token' => null,
+            ]);
+        }
+
+        $state = (string) $request->query('state', '');
+        if ($state === '' || Cache::pull('oauth_state_' . $state) !== $provider) {
+            return view('auth.oauth-complete', [
+                'ok' => false,
+                'message' => 'Invalid OAuth state.',
+                'token' => null,
+            ]);
+        }
+
+        $code = (string) $request->query('code', '');
+        if ($code === '') {
+            return view('auth.oauth-complete', [
+                'ok' => false,
+                'message' => 'Missing OAuth authorization code.',
+                'token' => null,
+            ]);
+        }
+
+        try {
+            $config = $oauth->providerConfig($provider, true);
+            $tokenData = $oauth->exchangeCode($provider, $code, $config);
+            $profile = $oauth->fetchProfile($provider, $tokenData, $config);
+            $user = $oauth->upsertUser($provider, $profile);
+            $token = app(JwtService::class)->createToken([
+                'sub' => $user->id,
+                'uid' => $user->uuid,
+            ], $this->jwtTtl());
+
+            return view('auth.oauth-complete', [
+                'ok' => true,
+                'message' => 'Inloggen gelukt. Je wordt doorgestuurd...',
+                'token' => $token,
+            ]);
+        } catch (\Throwable $e) {
+            return view('auth.oauth-complete', [
+                'ok' => false,
+                'message' => 'OAuth login failed.',
+                'token' => null,
+            ]);
+        }
+    }
+
     public function me(): JsonResponse
     {
-        /** @var User $user */
         $user = request()->attributes->get('auth_user');
 
         return response()->json([
@@ -121,6 +304,7 @@ class AuthController extends Controller
             'plan' => $user->plan,
             'plan_status' => $user->plan_status,
             'status' => $user->status,
+            'email_verified_at' => $user->email_verified_at,
         ];
     }
 
@@ -143,8 +327,7 @@ class AuthController extends Controller
     private function deriveUsername(?string $email, ?string $phone): string
     {
         if ($email) {
-            $prefix = explode('@', $email)[0];
-            return substr($prefix, 0, 100);
+            return substr(explode('@', $email)[0], 0, 100);
         }
         if ($phone) {
             return substr('user_' . ltrim($phone, '+'), 0, 100);
@@ -156,4 +339,110 @@ class AuthController extends Controller
     {
         return (int) (env('JWT_TTL', 60));
     }
+
+    private function verificationRequired(EmailSettingsService $emailSettings, ?string $email): bool
+    {
+        if (!$email) {
+            return false;
+        }
+        $settings = $emailSettings->settings();
+        return (bool) ($settings['email_enabled'] ?? false) && (bool) ($settings['email_send_verification'] ?? false);
+    }
+
+    private function issueEmailVerificationToken(User $user, EmailSettingsService $emailSettings): string
+    {
+        $settings = $emailSettings->settings();
+        $ttl = max(5, (int) ($settings['email_verification_token_ttl_minutes'] ?? 1440));
+        $plain = Str::random(64);
+
+        $user->email_verification_token = hash('sha256', $plain);
+        $user->email_verification_sent_at = now();
+        $user->email_verification_expires_at = now()->addMinutes($ttl);
+        $user->save();
+
+        return $plain;
+    }
+
+    private function sendVerificationEmail(User $user, string $token, EmailSettingsService $emailSettings): void
+    {
+        $settings = $emailSettings->settings(true);
+        if (!(bool) ($settings['email_enabled'] ?? false) || !(bool) ($settings['email_send_verification'] ?? false) || !$user->email) {
+            return;
+        }
+
+        $baseUrl = trim((string) ($settings['email_verification_link_base_url'] ?? ''));
+        if ($baseUrl === '') {
+            $baseUrl = rtrim((string) config('app.url'), '/') . '/verify-email';
+        }
+        $separator = str_contains($baseUrl, '?') ? '&' : '?';
+        $link = $baseUrl . $separator . http_build_query(['uid' => $user->uuid, 'token' => $token]);
+
+        $ttl = max(5, (int) ($settings['email_verification_token_ttl_minutes'] ?? 1440));
+        $template = $emailSettings->renderTemplate('email_verification', [
+            'name' => $user->username ?: 'gebruiker',
+            'verification_link' => $link,
+            'ttl_minutes' => $ttl,
+        ]);
+        $subject = $template['subject'] ?? 'Verifieer je e-mailadres';
+        $body = $template['body'] ?? ('Klik op deze link om te verifiëren: ' . $link);
+
+        try {
+            $emailSettings->applyRuntimeMailConfig();
+            Mail::raw($body, function ($message) use ($user, $subject, $settings) {
+                $message->to($user->email)->subject($subject);
+                if (!empty($settings['email_reply_to_address'])) {
+                    $message->replyTo($settings['email_reply_to_address'], $settings['email_reply_to_name'] ?: null);
+                }
+            });
+            $this->logEmailEvent([
+                'template_key' => 'email_verification',
+                'to_email' => $user->email,
+                'subject' => $subject,
+                'status' => 'SENT',
+                'meta' => ['source' => 'auth_register'],
+            ]);
+        } catch (\Throwable $e) {
+            $this->logEmailEvent([
+                'template_key' => 'email_verification',
+                'to_email' => $user->email,
+                'subject' => $subject,
+                'status' => 'FAILED',
+                'error_message' => $e->getMessage(),
+                'meta' => ['source' => 'auth_register'],
+            ]);
+        }
+    }
+
+    private function logEmailEvent(array $data): void
+    {
+        try {
+            EmailLog::create($data);
+        } catch (\Throwable $e) {
+        }
+    }
+
+    private function sanitizeUsername(string $value): string
+    {
+        $value = strtolower(trim($value));
+        $value = preg_replace('/[^a-z0-9._-]+/', '-', $value) ?: '';
+        $value = trim($value, '-._');
+        return substr($value, 0, 100);
+    }
+
+    private function ensureUniqueUsername(string $base): string
+    {
+        $base = $this->sanitizeUsername($base);
+        if ($base === '') {
+            $base = 'user';
+        }
+        $candidate = substr($base, 0, 100);
+        $suffix = 1;
+        while (User::where('username', $candidate)->exists()) {
+            $tail = '-' . $suffix;
+            $candidate = substr($base, 0, max(1, 100 - strlen($tail))) . $tail;
+            $suffix++;
+        }
+        return $candidate;
+    }
+
 }

@@ -5,6 +5,9 @@ use App\Http\Controllers\AdminHealthController;
 use App\Http\Controllers\AdminMetricsController;
 use App\Http\Controllers\AdminGeminiController;
 use App\Http\Controllers\AdminAiSettingsController;
+use App\Http\Controllers\AdminEmailSettingsController;
+use App\Http\Controllers\AdminAuthProvidersController;
+use App\Http\Controllers\AdminPlanCatalogController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AdminCompanyController;
 use App\Http\Controllers\AdminTenderController;
@@ -18,11 +21,15 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\PaymentProofController;
 use App\Http\Controllers\TenderController;
 use App\Http\Controllers\UserNotificationController;
+use App\Http\Controllers\PlanCatalogController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
     Route::middleware('throttle:10,1')->post('register', [AuthController::class, 'register']);
     Route::middleware('throttle:10,1')->post('login', [AuthController::class, 'login']);
+    Route::middleware('throttle:20,1')->post('verify-email', [AuthController::class, 'verifyEmail']);
+    Route::middleware('throttle:5,1')->post('resend-verification', [AuthController::class, 'resendVerification']);
+    Route::get('providers', [AdminAuthProvidersController::class, 'publicConfig']);
 
     Route::middleware('jwt')->get('me', [AuthController::class, 'me']);
     Route::middleware('jwt')->post('logout', [AuthController::class, 'logout']);
@@ -31,6 +38,7 @@ Route::prefix('auth')->group(function () {
 // Public company profile
 Route::get('public/companies/{slug}', [CompanyController::class, 'publicProfile']);
 Route::get('public/companies/{slug}/photo', [CompanyController::class, 'publicPhoto']);
+Route::get('plans', [PlanCatalogController::class, 'index']);
 
 // Public tender feed (no auth)
 Route::get('public/tenders', [TenderController::class, 'indexPublic']);
@@ -65,7 +73,7 @@ Route::middleware('jwt')->group(function () {
     Route::get('payment-proofs/latest', [PaymentProofController::class, 'latest']);
     Route::get('payment-proofs/latest/file', [PaymentProofController::class, 'latestFile']);
     Route::get('notifications', [UserNotificationController::class, 'index']);
-    Route::get('gemini/health', [AdminGeminiController::class, 'health']);
+    Route::get('settings/payment', [AdminEmailSettingsController::class, 'paymentSettings']);
 
     Route::get('tenders', [TenderController::class, 'index']);
     Route::get('tenders/mine', [TenderController::class, 'listMine']);
@@ -91,6 +99,7 @@ Route::middleware('jwt')->group(function () {
         Route::post('admin/documents/{id}/approve', [AdminDocumentController::class, 'approve']);
         Route::post('admin/documents/{id}/reject', [AdminDocumentController::class, 'reject']);
         Route::get('admin/compliance-rules', [ComplianceRuleController::class, 'index']);
+        Route::get('admin/compliance-rules/meta', [ComplianceRuleController::class, 'meta']);
         Route::get('admin/compliance-rules/{id}', [ComplianceRuleController::class, 'show']);
         Route::post('admin/compliance-rules', [ComplianceRuleController::class, 'store']);
         Route::patch('admin/compliance-rules/{id}', [ComplianceRuleController::class, 'update']);
@@ -113,6 +122,15 @@ Route::middleware('jwt')->group(function () {
         Route::get('admin/gemini/health', [AdminGeminiController::class, 'health']);
         Route::get('admin/ai-settings', [AdminAiSettingsController::class, 'show']);
         Route::put('admin/ai-settings', [AdminAiSettingsController::class, 'update']);
+        Route::get('admin/email-settings', [AdminEmailSettingsController::class, 'show']);
+        Route::put('admin/email-settings', [AdminEmailSettingsController::class, 'update']);
+        Route::post('admin/email-settings/test', [AdminEmailSettingsController::class, 'sendTest']);
+        Route::get('admin/email-settings/logs', [AdminEmailSettingsController::class, 'logs']);
+        Route::get('admin/auth-providers', [AdminAuthProvidersController::class, 'show']);
+        Route::put('admin/auth-providers', [AdminAuthProvidersController::class, 'update']);
+        Route::get('admin/plans', [AdminPlanCatalogController::class, 'index']);
+        Route::post('admin/plans', [AdminPlanCatalogController::class, 'store']);
+        Route::patch('admin/plans/{id}', [AdminPlanCatalogController::class, 'update']);
         Route::get('admin/payment-proofs', [AdminPaymentProofController::class, 'index']);
         Route::post('admin/payment-proofs/{id}/approve', [AdminPaymentProofController::class, 'approve']);
         Route::post('admin/payment-proofs/{id}/reject', [AdminPaymentProofController::class, 'reject']);

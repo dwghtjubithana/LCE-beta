@@ -29,9 +29,6 @@
         </select>
         <select id="filter-plan">
             <option value="">All plans</option>
-            <option value="FREE">Free</option>
-            <option value="PRO">Pro</option>
-            <option value="BUSINESS">Business</option>
         </select>
         <select id="filter-limit">
             <option value="10">10</option>
@@ -61,6 +58,31 @@
 
     let page = 1;
     let meta = { page: 1, total_pages: 1 };
+
+    async function loadPlanFilters() {
+        const planEl = document.getElementById('filter-plan');
+        const current = planEl.value;
+        const res = await AdminApp.api('/api/admin/plans?include_inactive=0');
+        const data = await AdminApp.readJson(res);
+        const plans = Array.isArray(data?.plans) ? data.plans : [];
+        if (!res.ok || !plans.length) {
+            planEl.innerHTML = `
+                <option value="">All plans</option>
+                <option value="FREE">Free</option>
+                <option value="PRO">Premium (PRO)</option>
+                <option value="BUSINESS">Business</option>
+                <option value="ENTERPRISE">Enterprise</option>
+            `;
+            if (current) planEl.value = current;
+            return;
+        }
+        planEl.innerHTML = `<option value="">All plans</option>` + plans.map((plan) => (
+            `<option value="${plan.plan_key}">${plan.plan_label || plan.plan_key} (${plan.plan_key})</option>`
+        )).join('');
+        if (current && Array.from(planEl.options).some((opt) => opt.value === current)) {
+            planEl.value = current;
+        }
+    }
 
     function renderTable(rows) {
         if (!rows.length) {
@@ -143,6 +165,9 @@
         loadUsers();
     });
 
-    loadUsers();
+    (async () => {
+        await loadPlanFilters();
+        await loadUsers();
+    })();
 </script>
 @endsection

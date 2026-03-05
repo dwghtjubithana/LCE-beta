@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\PlanCatalog;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -91,12 +92,21 @@ class AdminUserController extends Controller
             ], 404);
         }
 
+        $allowedPlans = $this->allowedPlanKeys();
         $data = $request->validate([
             'app_role' => ['sometimes', 'in:user,admin'],
             'status' => ['sometimes', 'in:ACTIVE,SUSPENDED'],
-            'plan' => ['sometimes', 'in:FREE,BUSINESS,ENTERPRISE,PRO'],
+            'plan' => ['sometimes', 'string', 'max:40', function ($attribute, $value, $fail) use ($allowedPlans) {
+                $normalized = strtoupper(trim((string) $value));
+                if (!in_array($normalized, $allowedPlans, true)) {
+                    $fail('Selected plan is not available in catalog.');
+                }
+            }],
             'plan_status' => ['sometimes', 'in:ACTIVE,PENDING_PAYMENT,EXPIRED'],
         ]);
+        if (array_key_exists('plan', $data)) {
+            $data['plan'] = strtoupper(trim((string) $data['plan']));
+        }
 
         if (!$data) {
             return response()->json([
@@ -120,6 +130,7 @@ class AdminUserController extends Controller
 
     public function store(Request $request, AuditLogService $audit): JsonResponse
     {
+        $allowedPlans = $this->allowedPlanKeys();
         $data = $request->validate([
             'username' => ['required', 'string', 'max:100'],
             'email' => ['nullable', 'email', 'max:150'],
@@ -127,9 +138,17 @@ class AdminUserController extends Controller
             'password' => ['required', 'string', 'min:8'],
             'app_role' => ['sometimes', 'in:user,admin'],
             'status' => ['sometimes', 'in:ACTIVE,SUSPENDED'],
-            'plan' => ['sometimes', 'in:FREE,BUSINESS,ENTERPRISE,PRO'],
+            'plan' => ['sometimes', 'string', 'max:40', function ($attribute, $value, $fail) use ($allowedPlans) {
+                $normalized = strtoupper(trim((string) $value));
+                if (!in_array($normalized, $allowedPlans, true)) {
+                    $fail('Selected plan is not available in catalog.');
+                }
+            }],
             'plan_status' => ['sometimes', 'in:ACTIVE,PENDING_PAYMENT,EXPIRED'],
         ]);
+        if (array_key_exists('plan', $data)) {
+            $data['plan'] = strtoupper(trim((string) $data['plan']));
+        }
 
         if (empty($data['email']) && empty($data['phone'])) {
             return response()->json([
@@ -159,7 +178,7 @@ class AdminUserController extends Controller
         $user->role = 'STAFF';
         $user->app_role = $data['app_role'] ?? 'user';
         $user->status = $data['status'] ?? 'ACTIVE';
-        $user->plan = $data['plan'] ?? 'FREE';
+        $user->plan = $data['plan'] ?? $this->defaultPlanKey();
         $user->plan_status = $data['plan_status'] ?? 'ACTIVE';
         $user->save();
 
@@ -177,5 +196,29 @@ class AdminUserController extends Controller
     private function authUser()
     {
         return request()->attributes->get('auth_user');
+    }
+
+    private function allowedPlanKeys(): array
+    {
+        $keys = PlanCatalog::query()
+            ->where('is_active', true)
+            ->orderBy('rank')
+            ->pluck('plan_key')
+            ->map(fn ($key) => strtoupper(trim((string) $key)))
+            ->filter(fn ($key) => $key !== '')
+            ->values()
+            ->all();
+
+        return $keys ?: ['FREE', 'PRO', 'BUSINESS', 'ENTERPRISE'];
+    }
+
+    private function defaultPlanKey(): string
+    {
+        $key = PlanCatalog::query()
+            ->where('is_active', true)
+            ->where('is_default', true)
+            ->value('plan_key');
+        $key = strtoupper(trim((string) $key));
+        return $key !== '' ? $key : 'FREE';
     }
 }

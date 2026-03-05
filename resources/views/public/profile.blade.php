@@ -48,6 +48,13 @@
             <h2>Locatie</h2>
             <div class="map" id="mapPlaceholder">Geen locatie beschikbaar.</div>
         </section>
+
+        <section class="profile__socials">
+            <h2>Kanalen</h2>
+            <div id="socialLinks" class="social-links">
+                <span class="status">Geen sociale links beschikbaar.</span>
+            </div>
+        </section>
     </div>
 </body>
 </html>

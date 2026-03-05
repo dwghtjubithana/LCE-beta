@@ -570,6 +570,10 @@
                     <input id="loginPassword" type="password" required placeholder="Minimaal 8 karakters">
                 </div>
                 <button class="btn btn-primary" type="submit" style="width:100%;">Inloggen</button>
+                <div id="landingOauthButtons" style="display:none; margin-top:10px; border-top:1px solid #e2e8f0; padding-top:10px; gap:8px;">
+                    <a id="landingGoogleLoginBtn" class="btn btn-ghost" href="#" style="width:100%; justify-content:center;">Inloggen met Google</a>
+                    <a id="landingMicrosoftLoginBtn" class="btn btn-ghost" href="#" style="width:100%; justify-content:center;">Inloggen met Microsoft</a>
+                </div>
                 <div id="loginStatus" class="status"></div>
             </form>
         </div>
@@ -650,6 +654,40 @@
             return fallback;
         }
 
+        async function loadAuthProviders() {
+            const wrap = document.getElementById('landingOauthButtons');
+            const googleBtn = document.getElementById('landingGoogleLoginBtn');
+            const msBtn = document.getElementById('landingMicrosoftLoginBtn');
+            if (!wrap || !googleBtn || !msBtn) return;
+            try {
+                const res = await fetch(`${API_BASE}/auth/providers`);
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) return;
+                const providers = data?.providers || {};
+                const google = providers.google || {};
+                const microsoft = providers.microsoft || {};
+
+                let any = false;
+                if (google.enabled && google.start_url) {
+                    googleBtn.href = google.start_url;
+                    googleBtn.style.display = 'inline-flex';
+                    any = true;
+                } else {
+                    googleBtn.style.display = 'none';
+                }
+                if (microsoft.enabled && microsoft.start_url) {
+                    msBtn.href = microsoft.start_url;
+                    msBtn.style.display = 'inline-flex';
+                    any = true;
+                } else {
+                    msBtn.style.display = 'none';
+                }
+                wrap.style.display = any ? 'grid' : 'none';
+            } catch (err) {
+                // ignore
+            }
+        }
+
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const status = document.getElementById('loginStatus');
@@ -664,6 +702,15 @@
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok || !data.token) {
+                    if (data.code === 'EMAIL_NOT_VERIFIED') {
+                        try {
+                            await fetch(`${API_BASE}/auth/resend-verification`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email })
+                            });
+                        } catch {}
+                    }
                     setStatus(status, readError(data, 'Inloggen mislukt.'));
                     return;
                 }
@@ -692,8 +739,16 @@
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json().catch(() => ({}));
-                if (!res.ok || !data.token) {
+                if (!res.ok) {
                     setStatus(status, readError(data, 'Registratie mislukt.'));
+                    return;
+                }
+                if (data.verification_required) {
+                    setStatus(status, data.message || 'Account aangemaakt. Controleer je e-mail en verifieer je account.', true);
+                    return;
+                }
+                if (!data.token) {
+                    setStatus(status, 'Registratie gelukt, maar inloggen kon niet automatisch. Log handmatig in.', true);
                     return;
                 }
                 localStorage.setItem(tokenKey, data.token);
@@ -703,6 +758,8 @@
                 setStatus(status, err.message || 'Netwerkfout tijdens registreren.');
             }
         });
+
+        loadAuthProviders();
     </script>
 </body>
 </html>

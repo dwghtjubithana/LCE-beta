@@ -14,14 +14,14 @@ class AdminCompanyController extends Controller
     public function store(Request $request, AuditLogService $audit): JsonResponse
     {
         $rules = [
-            'owner_user_id' => ['required', 'integer'],
+            'owner_user_id' => ['required', 'integer', 'exists:users,id'],
             'company_name' => ['required', 'string', 'max:255'],
             'sector' => ['required', 'string', 'max:255'],
             'experience' => ['nullable', 'string'],
             'contact' => ['nullable'],
         ];
-        if ($this->companyTypeKeyAvailable()) {
-            $rules['company_type_key'] = ['nullable', 'string', 'max:120'];
+        if ($this->companyTypeKeyAvailable() && Schema::hasTable('company_type_requirements')) {
+            $rules['company_type_key'] = ['nullable', 'string', 'max:120', 'exists:company_type_requirements,company_type_key'];
         }
         $data = $request->validate($rules);
 
