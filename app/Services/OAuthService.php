@@ -4,6 +4,10 @@ namespace App\Services;
 
 use App\Models\AppSetting;
 use App\Models\User;
+use Firebase\JWT\JWK;
+use Firebase\JWT\JWT;
+use Firebase\JWT\SignatureInvalidException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -48,10 +52,10 @@ class OAuthService
         ];
     }
 
-    public function buildAuthorizeUrl(string $provider, array $config, string $state): string
+    public function buildAuthorizeUrl(string $provider, array $config, string $state, ?string $nonce = null): string
     {
         if ($provider === 'google') {
-            return 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
+            $query = [
                 'client_id' => $config['client_id'],
                 'redirect_uri' => $config['redirect_uri'],
                 'response_type' => 'code',
@@ -59,20 +63,29 @@ class OAuthService
                 'state' => $state,
                 'access_type' => 'offline',
                 'prompt' => $config['prompt'] ?: 'select_account',
-            ]);
+            ];
+            if ($nonce) {
+                $query['nonce'] = $nonce;
+            }
+            return 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($query);
+        }
+
+        $query = [
+            'client_id' => $config['client_id'],
+            'redirect_uri' => $config['redirect_uri'],
+            'response_type' => 'code',
+            'response_mode' => 'query',
+            'scope' => 'openid profile email User.Read',
+            'state' => $state,
+        ];
+        if ($nonce) {
+            $query['nonce'] = $nonce;
         }
 
         return sprintf(
             'https://login.microsoftonline.com/%s/oauth2/v2.0/authorize?%s',
             rawurlencode($config['tenant']),
-            http_build_query([
-                'client_id' => $config['client_id'],
-                'redirect_uri' => $config['redirect_uri'],
-                'response_type' => 'code',
-                'response_mode' => 'query',
-                'scope' => 'openid profile email User.Read',
-                'state' => $state,
-            ])
+            http_build_query($query)
         );
     }
 
@@ -108,13 +121,13 @@ class OAuthService
         return (array) $res->json();
     }
 
-    public function fetchProfile(string $provider, array $tokenData, array $config): array
+    public function fetchProfile(string $provider, array $tokenData, array $config, ?string $nonce = null): array
     {
         if ($provider === 'google') {
             return $this->fetchGoogleProfile($tokenData, $config);
         }
 
-        return $this->fetchMicrosoftProfile($tokenData, $config);
+        return $this->fetchMicrosoftProfile($tokenData, $config, $nonce);
     }
 
     public function upsertUser(string $provider, array $profile): User
@@ -183,14 +196,14 @@ class OAuthService
         ];
     }
 
-    private function fetchMicrosoftProfile(array $tokenData, array $config): array
+    private function fetchMicrosoftProfile(array $tokenData, array $config, ?string $expectedNonce = null): array
     {
         $idToken = (string) ($tokenData['id_token'] ?? '');
         if ($idToken === '') {
             throw new \RuntimeException('Microsoft id_token ontbreekt.');
         }
 
-        $claims = $this->decodeJwtPayload($idToken);
+        $claims = $this->validateMicrosoftIdToken($idToken, $config, $expectedNonce);
         if (($claims['aud'] ?? '') !== ($config['client_id'] ?? '')) {
             throw new \RuntimeException('Microsoft audience mismatch.');
         }
@@ -243,6 +256,64 @@ class OAuthService
         ];
     }
 
+    public function diagnostics(): array
+    {
+        $google = $this->providerConfig('google', false);
+        $microsoft = $this->providerConfig('microsoft', false);
+
+        $googleIssues = [];
+        if (!$google['client_id']) {
+            $googleIssues[] = 'Google client id ontbreekt.';
+        }
+        if (!$google['client_secret']) {
+            $googleIssues[] = 'Google client secret ontbreekt.';
+        }
+        if (!$google['redirect_uri']) {
+            $googleIssues[] = 'Google redirect URI ontbreekt.';
+        }
+
+        $microsoftIssues = [];
+        $microsoftMeta = [
+            'oidc_discovery_ok' => false,
+            'jwks_ok' => false,
+            'jwks_keys_count' => 0,
+        ];
+        if (!$microsoft['client_id']) {
+            $microsoftIssues[] = 'Microsoft client id ontbreekt.';
+        }
+        if (!$microsoft['client_secret']) {
+            $microsoftIssues[] = 'Microsoft client secret ontbreekt.';
+        }
+        if (!$microsoft['redirect_uri']) {
+            $microsoftIssues[] = 'Microsoft redirect URI ontbreekt.';
+        }
+
+        try {
+            $oidc = $this->microsoftOpenIdConfig((string) ($microsoft['tenant'] ?? 'common'));
+            $microsoftMeta['oidc_discovery_ok'] = true;
+            $jwks = $this->microsoftJwks((string) ($oidc['jwks_uri'] ?? ''));
+            $microsoftMeta['jwks_ok'] = true;
+            $microsoftMeta['jwks_keys_count'] = count((array) ($jwks['keys'] ?? []));
+            if ($microsoftMeta['jwks_keys_count'] < 1) {
+                $microsoftIssues[] = 'Microsoft JWKS bevat geen keys.';
+            }
+        } catch (\Throwable $e) {
+            $microsoftIssues[] = 'Microsoft OIDC discovery/JWKS check mislukt.';
+        }
+
+        return [
+            'google' => [
+                'enabled' => (bool) ($google['enabled'] ?? false),
+                'issues' => $googleIssues,
+            ],
+            'microsoft' => [
+                'enabled' => (bool) ($microsoft['enabled'] ?? false),
+                'issues' => $microsoftIssues,
+                'meta' => $microsoftMeta,
+            ],
+        ];
+    }
+
     private function decodeJwtPayload(string $jwt): array
     {
         $parts = explode('.', $jwt);
@@ -263,6 +334,124 @@ class OAuthService
         }
 
         return $claims;
+    }
+
+    private function decodeJwtHeader(string $jwt): array
+    {
+        $parts = explode('.', $jwt);
+        if (count($parts) < 2) {
+            throw new \RuntimeException('Ongeldig OAuth token formaat.');
+        }
+
+        $header = $parts[0];
+        $header .= str_repeat('=', (4 - strlen($header) % 4) % 4);
+        $decoded = base64_decode(strtr($header, '-_', '+/'), true);
+        if ($decoded === false) {
+            throw new \RuntimeException('OAuth token header kan niet worden gelezen.');
+        }
+
+        $parsed = json_decode($decoded, true);
+        if (!is_array($parsed)) {
+            throw new \RuntimeException('OAuth token header is ongeldig.');
+        }
+        return $parsed;
+    }
+
+    private function validateMicrosoftIdToken(string $idToken, array $config, ?string $expectedNonce): array
+    {
+        $tenant = (string) ($config['tenant'] ?? 'common');
+        $oidc = $this->microsoftOpenIdConfig($tenant);
+        $jwksUri = (string) ($oidc['jwks_uri'] ?? '');
+        if ($jwksUri === '') {
+            throw new \RuntimeException('Microsoft OIDC jwks_uri ontbreekt.');
+        }
+        $jwks = $this->microsoftJwks($jwksUri);
+
+        $header = $this->decodeJwtHeader($idToken);
+        $alg = (string) ($header['alg'] ?? '');
+        if (!in_array($alg, ['RS256', 'RS384', 'RS512'], true)) {
+            throw new \RuntimeException('Microsoft id_token gebruikt een onveilig of onbekend algoritme.');
+        }
+
+        $keys = JWK::parseKeySet($jwks, 'RS256');
+        try {
+            /** @var \stdClass $decoded */
+            $decoded = JWT::decode($idToken, $keys);
+        } catch (SignatureInvalidException $e) {
+            throw new \RuntimeException('Microsoft id_token signature mismatch.');
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('Microsoft id_token validatie mislukt.');
+        }
+        $claims = (array) $decoded;
+
+        $issuerTemplate = (string) ($oidc['issuer'] ?? '');
+        if ($issuerTemplate === '') {
+            throw new \RuntimeException('Microsoft OIDC issuer ontbreekt.');
+        }
+        $issuer = (string) ($claims['iss'] ?? '');
+        if (!$this->issuerMatches($issuerTemplate, $issuer, $claims)) {
+            throw new \RuntimeException('Microsoft issuer mismatch.');
+        }
+
+        if ($expectedNonce !== null && $expectedNonce !== '') {
+            $nonce = (string) ($claims['nonce'] ?? '');
+            if ($nonce === '' || !hash_equals($expectedNonce, $nonce)) {
+                throw new \RuntimeException('Microsoft nonce mismatch.');
+            }
+        }
+
+        return $claims;
+    }
+
+    private function issuerMatches(string $issuerTemplate, string $issuer, array $claims): bool
+    {
+        if ($issuerTemplate === '' || $issuer === '') {
+            return false;
+        }
+        if (str_contains($issuerTemplate, '{tenantid}')) {
+            $tid = (string) ($claims['tid'] ?? '');
+            if ($tid === '') {
+                return false;
+            }
+            $issuerTemplate = str_replace('{tenantid}', $tid, $issuerTemplate);
+        }
+        return hash_equals(rtrim($issuerTemplate, '/'), rtrim($issuer, '/'));
+    }
+
+    private function microsoftOpenIdConfig(string $tenant): array
+    {
+        $tenant = trim($tenant) !== '' ? trim($tenant) : 'common';
+        $cacheKey = 'oauth_ms_oidc_' . md5(strtolower($tenant));
+
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($tenant) {
+            $url = sprintf('https://login.microsoftonline.com/%s/v2.0/.well-known/openid-configuration', rawurlencode($tenant));
+            $res = Http::timeout(10)->get($url);
+            if (!$res->ok()) {
+                throw new \RuntimeException('Microsoft OIDC discovery mislukt.');
+            }
+            $json = (array) $res->json();
+            if (empty($json['issuer']) || empty($json['jwks_uri'])) {
+                throw new \RuntimeException('Microsoft OIDC discovery onvolledig.');
+            }
+            return $json;
+        });
+    }
+
+    private function microsoftJwks(string $jwksUri): array
+    {
+        $cacheKey = 'oauth_ms_jwks_' . md5($jwksUri);
+
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($jwksUri) {
+            $res = Http::timeout(10)->get($jwksUri);
+            if (!$res->ok()) {
+                throw new \RuntimeException('Microsoft JWKS ophalen mislukt.');
+            }
+            $json = (array) $res->json();
+            if (!isset($json['keys']) || !is_array($json['keys'])) {
+                throw new \RuntimeException('Microsoft JWKS ongeldig.');
+            }
+            return $json;
+        });
     }
 
     private function normalizeEmail(?string $email): ?string

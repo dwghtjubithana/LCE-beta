@@ -133,6 +133,8 @@ class ProcessDocument implements ShouldQueue
         $validationFailed = false;
         $validationError = null;
         $validationRetried = false;
+        $maxValidationRetries = max(0, min(3, $this->settingInt('ai_validation_retry_count', 1)));
+        $includeInternalDebugPaths = $this->settingBool('ai_include_internal_debug_paths', false);
         $primaryEntry = collect($fileEntries)->first(fn ($entry) => strtoupper((string) ($entry['side'] ?? '')) === 'FRONT')
             ?? ($fileEntries[0] ?? null);
         $primaryPath = $primaryEntry['path'] ?? $document->source_file_url;
@@ -165,19 +167,10 @@ class ProcessDocument implements ShouldQueue
             ];
             $gemini = app(GeminiService::class);
 
-            $aiResult = $document->category_selected === 'KKF Uittreksel'
-                ? $gemini->validateKkf($base64, $mimeType, $extractedData['ocr_text'] ?? null, $additionalFiles)
-                : $gemini->validateDocument(
-                    $document->category_selected,
-                    $ruleText,
-                    $base64,
-                    $mimeType,
-                    $extractedData['ocr_text'] ?? null,
-                    $additionalFiles
-                );
-            if (is_array($aiResult) && ($aiResult['status'] ?? null) === 'ERROR') {
-                $validationError = (string) ($aiResult['compliance_notitie'] ?? 'Unexpected Gemini response.');
-                $validationRetried = true;
+            $attempt = 0;
+            $maxAttempts = 1 + $maxValidationRetries;
+            do {
+                $attempt++;
                 $aiResult = $document->category_selected === 'KKF Uittreksel'
                     ? $gemini->validateKkf($base64, $mimeType, $extractedData['ocr_text'] ?? null, $additionalFiles)
                     : $gemini->validateDocument(
@@ -188,10 +181,18 @@ class ProcessDocument implements ShouldQueue
                         $extractedData['ocr_text'] ?? null,
                         $additionalFiles
                     );
-                if (is_array($aiResult) && ($aiResult['status'] ?? null) === 'ERROR') {
-                    $validationFailed = true;
-                    $validationError = (string) ($aiResult['compliance_notitie'] ?? $validationError);
+                $isError = is_array($aiResult) && ($aiResult['status'] ?? null) === 'ERROR';
+                if (!$isError) {
+                    break;
                 }
+                $validationError = (string) ($aiResult['compliance_notitie'] ?? 'Unexpected Gemini response.');
+                if ($attempt < $maxAttempts) {
+                    $validationRetried = true;
+                }
+            } while ($attempt < $maxAttempts);
+
+            if (is_array($aiResult) && ($aiResult['status'] ?? null) === 'ERROR') {
+                $validationFailed = true;
             }
             $summary = $gemini->generateComplianceSummary(
                 $summaryInstructionText,
@@ -228,6 +229,10 @@ class ProcessDocument implements ShouldQueue
                 'has_back_side' => $hasBackSide,
                 'requires_back_side' => $requiresBack,
             ];
+            if ($includeInternalDebugPaths) {
+                $extractedData['ai_debug_meta']['file_path'] = $filePath;
+                $extractedData['ai_debug_meta']['storage_root'] = $disk->path('');
+            }
             $extractedData['instruction'] = [
                 'file' => $instruction['file'],
                 'version' => $instruction['version'],
@@ -241,7 +246,7 @@ class ProcessDocument implements ShouldQueue
             }
         }
         if (!isset($extractedData['ai_debug_meta'])) {
-            $extractedData['ai_debug_meta'] = [
+            $debugMeta = [
                 'timestamp' => now()->toISOString(),
                 'ocr_text_len' => strlen($extractedData['ocr_text'] ?? ''),
                 'ocr_confidence' => $extractedData['ocr_confidence'] ?? null,
@@ -253,8 +258,6 @@ class ProcessDocument implements ShouldQueue
                 'gemini_validation_status' => is_array($aiResult) ? ($aiResult['status'] ?? null) : null,
                 'gemini_summary_status' => is_array($summary) ? ($summary['status'] ?? null) : null,
                 'file_exists' => $fileExists,
-                'file_path' => $filePath,
-                'storage_root' => $disk->path(''),
                 'validation_retried' => $validationRetried,
                 'validation_failed' => $validationFailed,
                 'validation_error' => $validationError,
@@ -262,6 +265,11 @@ class ProcessDocument implements ShouldQueue
                 'has_back_side' => $hasBackSide,
                 'requires_back_side' => $requiresBack,
             ];
+            if ($includeInternalDebugPaths) {
+                $debugMeta['file_path'] = $filePath;
+                $debugMeta['storage_root'] = $disk->path('');
+            }
+            $extractedData['ai_debug_meta'] = $debugMeta;
         }
 
         if ($document->detected_type && $document->detected_type !== $document->category_selected) {
@@ -444,6 +452,19 @@ class ProcessDocument implements ShouldQueue
             return (float) $val;
         } catch (\Throwable $e) {
             return null;
+        }
+    }
+
+    private function settingInt(string $key, int $default = 0): int
+    {
+        try {
+            $val = \App\Models\AppSetting::getValue($key);
+            if ($val === null || $val === '') {
+                return $default;
+            }
+            return (int) $val;
+        } catch (\Throwable $e) {
+            return $default;
         }
     }
 

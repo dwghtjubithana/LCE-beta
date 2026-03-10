@@ -4,6 +4,8 @@
 @php($active = 'system')
 
 @section('content')
+@include('admin.partials.settings-subnav')
+
 <div class="page-header">
     <div>
         <h2>Systeemstatus & AI</h2>
@@ -38,32 +40,132 @@
     AdminApp.requireAuth();
     AdminApp.initTopbar();
 
-    function formatLabel(key) {
-        return key
-            .replace(/_/g, ' ')
-            .replace(/([a-z])([A-Z])/g, '$1 $2')
-            .replace(/\b\w/g, (c) => c.toUpperCase());
+    function escapeHtml(value) {
+        const str = String(value ?? '');
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
-    function formatValue(value) {
-        if (value === null || value === undefined) return '—';
-        if (typeof value === 'object') return `<span class="muted">${JSON.stringify(value)}</span>`;
-        return String(value);
+
+    function renderStatTiles(stats) {
+        return `
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+                ${stats.map((item) => `
+                    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;background:#fff;">
+                        <div class="status" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">${escapeHtml(item.label)}</div>
+                        <div style="font-size:22px;font-weight:800;line-height:1.2;color:#0f172a;">${escapeHtml(item.value)}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
     }
-    function renderKeyValue(targetId, data) {
-        const target = document.getElementById(targetId);
+
+    function formatDuration(seconds) {
+        if (seconds === null || seconds === undefined || Number.isNaN(Number(seconds))) return '—';
+        const s = Number(seconds);
+        if (s < 60) return `${s}s`;
+        const m = Math.floor(s / 60);
+        const rs = s % 60;
+        return rs ? `${m}m ${rs}s` : `${m}m`;
+    }
+
+    function renderHealth(health) {
+        const target = document.getElementById('health');
         if (!target) return;
-        if (!data || typeof data !== 'object') {
-            target.textContent = 'No data available.';
+        if (!health || typeof health !== 'object') {
+            target.textContent = 'Geen statusdata beschikbaar.';
             return;
         }
-        const rows = Object.entries(data).map(([key, value]) => {
-            return `<tr><td>${formatLabel(key)}</td><td>${formatValue(value)}</td></tr>`;
-        }).join('');
+
+        const env = String(health.app_env || 'unknown').toUpperCase();
+        const envColor = env === 'PRODUCTION' ? '#16a34a' : '#f59e0b';
+
         target.innerHTML = `
-            <table class="table">
-                <thead><tr><th>Field</th><th>Value</th></tr></thead>
-                <tbody>${rows || '<tr><td colspan="2">No data</td></tr>'}</tbody>
-            </table>
+            ${renderStatTiles([
+                { label: 'Environment', value: env },
+                { label: 'Queue', value: health.queue_connection || '—' },
+                { label: 'Laravel', value: health.app_version || '—' },
+            ])}
+            <div style="margin-top:12px;display:grid;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="display:inline-flex;padding:3px 9px;border-radius:999px;background:${envColor}22;color:${envColor};font-size:12px;font-weight:700;">${escapeHtml(env)}</span>
+                    <span class="status">Actieve omgeving</span>
+                </div>
+                <div class="status">Laatste tender import: <strong>${escapeHtml(AdminApp.formatDateTime(health.last_tender_import_at))}</strong></div>
+                <div class="status">Laatste notificaties verstuurd: <strong>${escapeHtml(AdminApp.formatDateTime(health.last_notifications_sent_at))}</strong></div>
+            </div>
+        `;
+    }
+
+    function renderStatusDistribution(statusMap) {
+        const entries = Object.entries(statusMap || {});
+        if (!entries.length) {
+            return '<div class="status">Nog geen documenten met status.</div>';
+        }
+
+        const total = entries.reduce((sum, [, count]) => sum + Number(count || 0), 0) || 1;
+        return `
+            <div style="display:grid;gap:8px;">
+                ${entries.map(([status, count]) => {
+                    const safeCount = Number(count || 0);
+                    const pct = Math.max(0, Math.min(100, Math.round((safeCount / total) * 100)));
+                    return `
+                        <div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                                <span style="font-size:12px;font-weight:700;color:#334155;">${escapeHtml(status)}</span>
+                                <span style="font-size:12px;color:#64748b;">${safeCount} (${pct}%)</span>
+                            </div>
+                            <div style="height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
+                                <div style="height:8px;width:${pct}%;background:#0ea5a4;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    function renderMetrics(metrics) {
+        const target = document.getElementById('metrics');
+        if (!target) return;
+        if (!metrics || typeof metrics !== 'object') {
+            target.textContent = 'Geen metrics beschikbaar.';
+            return;
+        }
+
+        target.innerHTML = `
+            ${renderStatTiles([
+                { label: 'Users', value: metrics.total_users ?? 0 },
+                { label: 'Companies', value: metrics.total_companies ?? 0 },
+                { label: 'Documents', value: metrics.total_documents ?? 0 },
+                { label: 'Gem. verwerking', value: formatDuration(metrics.avg_processing_seconds) },
+            ])}
+            <div style="margin-top:12px;">
+                <div class="status" style="margin-bottom:6px;">Documenten per status</div>
+                ${renderStatusDistribution(metrics.documents_by_status)}
+            </div>
+        `;
+    }
+
+    function renderGemini(result) {
+        const target = document.getElementById('gemini');
+        if (!target) return;
+        const status = String(result?.status || '').toLowerCase();
+        const isOk = status === 'ok';
+        const color = isOk ? '#16a34a' : '#ef4444';
+        const label = isOk ? 'Connected' : 'Not connected';
+        const message = result?.message || '—';
+
+        target.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <span style="width:10px;height:10px;border-radius:999px;background:${color};display:inline-block;"></span>
+                <strong style="color:${color};">${label}</strong>
+            </div>
+            <div class="status">Status: ${escapeHtml(status || 'unknown')}</div>
+            <div class="status">Melding: ${escapeHtml(message)}</div>
         `;
     }
 
@@ -74,7 +176,7 @@
             document.getElementById('health').textContent = data.message || 'Failed to load health.';
             return;
         }
-        renderKeyValue('health', data.health || {});
+        renderHealth(data.health || {});
     }
 
     async function loadMetrics() {
@@ -84,7 +186,7 @@
             document.getElementById('metrics').textContent = data.message || 'Failed to load metrics.';
             return;
         }
-        renderKeyValue('metrics', data.metrics || {});
+        renderMetrics(data.metrics || {});
     }
 
     async function testGemini() {
@@ -94,16 +196,7 @@
             document.getElementById('gemini').textContent = data.message || 'Failed to test Gemini.';
             return;
         }
-        const result = data?.result || {};
-        const status = String(result.status || '').toLowerCase();
-        const label = status === 'ok'
-            ? '<span style="color:#16a34a;font-weight:600;">Connected</span>'
-            : '<span style="color:#ef4444;font-weight:600;">Not connected</span>';
-        renderKeyValue('gemini', {
-            status: status || 'unknown',
-            connection: label,
-            message: result.message || null,
-        });
+        renderGemini(data?.result || {});
     }
 
     document.getElementById('btn-gemini').addEventListener('click', testGemini);

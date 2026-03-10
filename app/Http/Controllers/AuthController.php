@@ -204,8 +204,13 @@ class AuthController extends Controller
         }
 
         $state = Str::random(48);
-        Cache::put('oauth_state_' . $state, $provider, now()->addMinutes(10));
-        $authUrl = $oauth->buildAuthorizeUrl($provider, $config, $state);
+        $nonce = Str::random(48);
+        Cache::put('oauth_state_' . $state, [
+            'provider' => $provider,
+            'nonce' => $nonce,
+            'issued_at' => now()->toISOString(),
+        ], now()->addMinutes(10));
+        $authUrl = $oauth->buildAuthorizeUrl($provider, $config, $state, $nonce);
 
         return redirect()->away($authUrl);
     }
@@ -226,7 +231,8 @@ class AuthController extends Controller
         }
 
         $state = (string) $request->query('state', '');
-        if ($state === '' || Cache::pull('oauth_state_' . $state) !== $provider) {
+        $statePayload = Cache::pull('oauth_state_' . $state);
+        if ($state === '' || !is_array($statePayload) || ($statePayload['provider'] ?? null) !== $provider) {
             return view('auth.oauth-complete', [
                 'ok' => false,
                 'message' => 'Invalid OAuth state.',
@@ -246,7 +252,7 @@ class AuthController extends Controller
         try {
             $config = $oauth->providerConfig($provider, true);
             $tokenData = $oauth->exchangeCode($provider, $code, $config);
-            $profile = $oauth->fetchProfile($provider, $tokenData, $config);
+            $profile = $oauth->fetchProfile($provider, $tokenData, $config, (string) ($statePayload['nonce'] ?? ''));
             $user = $oauth->upsertUser($provider, $profile);
             $token = app(JwtService::class)->createToken([
                 'sub' => $user->id,
@@ -370,10 +376,7 @@ class AuthController extends Controller
             return;
         }
 
-        $baseUrl = trim((string) ($settings['email_verification_link_base_url'] ?? ''));
-        if ($baseUrl === '') {
-            $baseUrl = rtrim((string) config('app.url'), '/') . '/verify-email';
-        }
+        $baseUrl = $this->resolveVerificationBaseUrl($settings);
         $separator = str_contains($baseUrl, '?') ? '&' : '?';
         $link = $baseUrl . $separator . http_build_query(['uid' => $user->uuid, 'token' => $token]);
 
@@ -419,6 +422,40 @@ class AuthController extends Controller
             EmailLog::create($data);
         } catch (\Throwable $e) {
         }
+    }
+
+    private function resolveVerificationBaseUrl(array $settings): string
+    {
+        $configured = trim((string) ($settings['email_verification_link_base_url'] ?? ''));
+        if ($configured !== '') {
+            return $this->normalizeVerificationBaseUrl($configured);
+        }
+
+        if (app()->bound('request')) {
+            $request = request();
+            $host = strtolower((string) $request->getHost());
+            if ($host !== '' && !in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+                return rtrim($request->getSchemeAndHttpHost(), '/') . '/verify-email';
+            }
+        }
+
+        return rtrim((string) config('app.url'), '/') . '/verify-email';
+    }
+
+    private function normalizeVerificationBaseUrl(string $value): string
+    {
+        $value = trim($value);
+        if (!preg_match('#^https?://#i', $value)) {
+            $value = 'https://' . ltrim($value, '/');
+        }
+
+        $parts = parse_url($value);
+        $path = $parts['path'] ?? '';
+        if ($path === '' || $path === '/') {
+            return rtrim($value, '/') . '/verify-email';
+        }
+
+        return $value;
     }
 
     private function sanitizeUsername(string $value): string

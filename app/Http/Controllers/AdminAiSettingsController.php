@@ -13,7 +13,7 @@ class AdminAiSettingsController extends Controller
         return response()->json([
             'status' => 'success',
             'settings' => [
-                'gemini_api_key' => AppSetting::getValue('gemini_api_key'),
+                'gemini_api_key_set' => AppSetting::hasRawValue('gemini_api_key'),
                 'gemini_model_validation' => AppSetting::getValue('gemini_model_validation'),
                 'gemini_model_summary' => AppSetting::getValue('gemini_model_summary'),
                 'gemini_debug_full' => AppSetting::getValue('gemini_debug_full'),
@@ -48,6 +48,9 @@ class AdminAiSettingsController extends Controller
             $normalized = $value;
             if (is_bool($value)) {
                 $normalized = $value ? '1' : '0';
+            }
+            if ($key === 'gemini_api_key' && $normalized === '********') {
+                continue;
             }
             if ($key === 'gemini_api_key' && ($normalized === null || $normalized === '')) {
                 continue;

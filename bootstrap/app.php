@@ -62,9 +62,15 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 405);
             }
 
+            \Illuminate\Support\Facades\Log::error('API unhandled exception', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'path' => $request->path(),
+            ]);
+
             return response()->json([
                 'code' => 'SERVER_ERROR',
-                'message' => $e->getMessage() ?: 'Server error.',
+                'message' => 'Server error.',
             ], 500);
         });
     })->create();

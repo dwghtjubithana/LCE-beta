@@ -4,6 +4,8 @@
 @php($active = 'email-settings')
 
 @section('content')
+@include('admin.partials.settings-subnav')
+
 <div class="page-header">
     <div>
         <h2>Email-instellingen</h2>
@@ -382,7 +384,7 @@
                             <td>${escapeHtml(log.to_email || '')}</td>
                             <td>${escapeHtml(log.template_key || '-')}</td>
                             <td>${escapeHtml(log.status || '-')}</td>
-                            <td>${escapeHtml(log.created_at || '-')}</td>
+                            <td>${escapeHtml(AdminApp.formatDateTime(log.created_at))}</td>
                         </tr>
                     `).join('')}
                 </tbody>

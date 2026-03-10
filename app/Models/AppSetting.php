@@ -31,7 +31,7 @@ class AppSetting extends Model
             try {
                 return \Illuminate\Support\Facades\Crypt::decryptString($value);
             } catch (\Throwable $e) {
-                return $value;
+                return $default;
             }
         }
         return $value;

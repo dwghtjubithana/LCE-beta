@@ -41,6 +41,12 @@ Route::get('/tenders/{id}', function ($id) {
 Route::get('/verify-email', function () {
     return view('auth.verify-email');
 });
+Route::get('/privacy-policy', function () {
+    return view('legal.privacy-policy');
+});
+Route::get('/terms-of-service', function () {
+    return view('legal.terms-of-service');
+});
 Route::get('/auth/oauth/{provider}/start', [\App\Http\Controllers\AuthController::class, 'oauthStart'])
     ->middleware('throttle:30,1')
     ->where('provider', 'google|microsoft');
@@ -126,6 +132,9 @@ Route::middleware('admin.basic')->group(function () {
     });
     Route::get('/admin/system', function () {
         return view('admin.system.index', ['active' => 'system']);
+    });
+    Route::get('/admin/settings', function () {
+        return view('admin.settings.index', ['active' => 'settings']);
     });
     Route::get('/admin/ai-settings', function () {
         return view('admin.ai-settings', ['active' => 'ai-settings']);

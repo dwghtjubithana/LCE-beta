@@ -4,6 +4,8 @@
 @php($active = 'auth-providers')
 
 @section('content')
+@include('admin.partials.settings-subnav')
+
 <div class="page-header">
     <div>
         <h2>Auth providers</h2>
@@ -78,8 +80,10 @@
 <div class="card">
     <div class="actions">
         <button class="btn" id="btn-save-auth-providers">Auth provider instellingen opslaan</button>
+        <button class="btn secondary" id="btn-test-auth-providers">Diagnostiek testen</button>
     </div>
     <div class="status" id="auth-provider-status"></div>
+    <div class="status" id="auth-provider-diagnostics" style="margin-top:10px;"></div>
 </div>
 @endsection
 
@@ -88,12 +92,22 @@
     AdminApp.requireAuth();
     AdminApp.initTopbar();
 
+    function escapeHtml(value) {
+        const str = String(value ?? '');
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     async function loadSettings() {
         const statusEl = document.getElementById('auth-provider-status');
         const res = await AdminApp.api('/api/admin/auth-providers');
         const data = await res.json();
         if (!res.ok) {
-            AdminApp.setStatus(statusEl, data.message || 'Laden mislukt.', 'error');
+            AdminApp.setStatus(statusEl, AdminApp.formatError(data) || 'Laden mislukt.', 'error');
             return;
         }
         const s = data.settings || {};
@@ -142,14 +156,48 @@
         });
         const data = await res.json();
         if (!res.ok) {
-            AdminApp.setStatus(statusEl, data.message || 'Opslaan mislukt.', 'error');
+            AdminApp.setStatus(statusEl, AdminApp.formatError(data) || 'Opslaan mislukt.', 'error');
             return;
         }
         AdminApp.setStatus(statusEl, data.message || 'Opgeslagen.', 'success');
         await loadSettings();
     }
 
+    function renderDiagnostics(diag) {
+        const target = document.getElementById('auth-provider-diagnostics');
+        if (!target) return;
+        const google = diag?.google || {};
+        const microsoft = diag?.microsoft || {};
+        const googleIssues = Array.isArray(google.issues) ? google.issues : [];
+        const microsoftIssues = Array.isArray(microsoft.issues) ? microsoft.issues : [];
+        const msMeta = microsoft.meta || {};
+
+        target.innerHTML = `
+            <div class="card" style="padding:12px; margin-top:8px;">
+                <div class="status"><strong>Google</strong> — ${googleIssues.length ? 'Attention needed' : 'Ready'}</div>
+                <div class="status">${googleIssues.length ? googleIssues.map((x) => escapeHtml(String(x))).join(' • ') : 'Geen issues gevonden.'}</div>
+                <div class="status" style="margin-top:8px;"><strong>Microsoft</strong> — ${microsoftIssues.length ? 'Attention needed' : 'Ready'}</div>
+                <div class="status">${microsoftIssues.length ? microsoftIssues.map((x) => escapeHtml(String(x))).join(' • ') : 'Geen issues gevonden.'}</div>
+                <div class="status" style="margin-top:6px;">OIDC discovery: ${msMeta.oidc_discovery_ok ? 'OK' : 'FAILED'} | JWKS: ${msMeta.jwks_ok ? 'OK' : 'FAILED'} | Keys: ${msMeta.jwks_keys_count ?? 0}</div>
+            </div>
+        `;
+    }
+
+    async function testDiagnostics() {
+        const statusEl = document.getElementById('auth-provider-status');
+        const res = await AdminApp.api('/api/admin/auth-providers/diagnostics');
+        const data = await res.json();
+        if (!res.ok) {
+            AdminApp.setStatus(statusEl, AdminApp.formatError(data) || 'Diagnostiek mislukt.', 'error');
+            return;
+        }
+        AdminApp.setStatus(statusEl, 'Diagnostiek uitgevoerd.', 'success');
+        renderDiagnostics(data.diagnostics || {});
+    }
+
     document.getElementById('btn-save-auth-providers').addEventListener('click', saveSettings);
+    document.getElementById('btn-test-auth-providers').addEventListener('click', testDiagnostics);
     loadSettings();
+    testDiagnostics();
 </script>
 @endsection

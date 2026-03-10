@@ -10,14 +10,10 @@ class AdminRole
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $envFlag = env('ADMIN_ENFORCE_API');
-        if ($envFlag === null) {
-            $enforce = config('app.env') === 'production';
-        } else {
-            $enforce = filter_var($envFlag, FILTER_VALIDATE_BOOLEAN);
-        }
-
-        if (!$enforce) {
+        // Enforce admin role checks by default in all environments.
+        // Optional bypass is allowed for local development only.
+        $enforce = filter_var((string) env('ADMIN_ENFORCE_API', 'true'), FILTER_VALIDATE_BOOLEAN);
+        if (!$enforce && app()->environment('local')) {
             return $next($request);
         }
 

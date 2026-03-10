@@ -259,6 +259,25 @@
             gap: 12px;
         }
         .muted { color: var(--muted); }
+        .settings-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .settings-nav a {
+            padding: 8px 12px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            background: #fff;
+        }
+        .settings-nav a.active {
+            color: var(--accent-2);
+            border-color: rgba(14, 165, 164, 0.35);
+            background: rgba(14, 165, 164, 0.08);
+        }
         @media (max-width: 960px) {
             .app { grid-template-columns: 1fr; }
             .sidebar { position: static; }
@@ -284,11 +303,13 @@
                 <a href="/admin/notifications" class="{{ ($active ?? '') === 'notifications' ? 'active' : '' }}">Notifications</a>
                 <a href="/admin/payment-proofs" class="{{ ($active ?? '') === 'payment-proofs' ? 'active' : '' }}">Payment Proofs</a>
                 <a href="/admin/audit-logs" class="{{ ($active ?? '') === 'logs' ? 'active' : '' }}">Audit Logs</a>
-                <a href="/admin/system" class="{{ ($active ?? '') === 'system' ? 'active' : '' }}">Systeemstatus</a>
-                <a href="/admin/ai-settings" class="{{ ($active ?? '') === 'ai-settings' ? 'active' : '' }}">AI-instellingen</a>
-                <a href="/admin/email-settings" class="{{ ($active ?? '') === 'email-settings' ? 'active' : '' }}">Email-instellingen</a>
-                <a href="/admin/auth-providers" class="{{ ($active ?? '') === 'auth-providers' ? 'active' : '' }}">Auth providers</a>
                 <a href="/admin/plans" class="{{ ($active ?? '') === 'plans' ? 'active' : '' }}">Plan catalog</a>
+                <h3>Settings</h3>
+                <a href="/admin/settings" class="{{ ($active ?? '') === 'settings' ? 'active' : '' }}">Settings Home</a>
+                <a href="/admin/system" class="{{ ($active ?? '') === 'system' ? 'active' : '' }}">System Status</a>
+                <a href="/admin/ai-settings" class="{{ ($active ?? '') === 'ai-settings' ? 'active' : '' }}">AI Settings</a>
+                <a href="/admin/email-settings" class="{{ ($active ?? '') === 'email-settings' ? 'active' : '' }}">Email Settings</a>
+                <a href="/admin/auth-providers" class="{{ ($active ?? '') === 'auth-providers' ? 'active' : '' }}">Auth Providers</a>
             </nav>
             <div class="sidebar-footer">
                 <button class="btn secondary" id="btn-logout">Sign out</button>

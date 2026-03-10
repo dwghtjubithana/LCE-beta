@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AppSetting;
 use App\Services\AuditLogService;
+use App\Services\OAuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -35,12 +36,12 @@ class AdminAuthProvidersController extends Controller
             'auth_google_enabled' => ['nullable', 'boolean'],
             'auth_google_client_id' => ['nullable', 'string', 'max:255'],
             'auth_google_client_secret' => ['nullable', 'string', 'max:255'],
-            'auth_google_redirect_uri' => ['nullable', 'url', 'max:500'],
+            'auth_google_redirect_uri' => ['nullable', 'string', 'max:500'],
             'auth_google_prompt' => ['nullable', 'in:select_account,consent,none'],
             'auth_microsoft_enabled' => ['nullable', 'boolean'],
             'auth_microsoft_client_id' => ['nullable', 'string', 'max:255'],
             'auth_microsoft_client_secret' => ['nullable', 'string', 'max:255'],
-            'auth_microsoft_redirect_uri' => ['nullable', 'url', 'max:500'],
+            'auth_microsoft_redirect_uri' => ['nullable', 'string', 'max:500'],
             'auth_microsoft_tenant' => ['nullable', 'string', 'max:120'],
         ]);
 
@@ -96,6 +97,21 @@ class AdminAuthProvidersController extends Controller
         ]);
     }
 
+    public function diagnostics(OAuthService $oauth, AuditLogService $audit): JsonResponse
+    {
+        $diagnostics = $oauth->diagnostics();
+
+        $audit->record($this->authUser(), 'admin.auth_providers.diagnostics', 'auth_providers', null, [
+            'google_enabled' => (bool) ($diagnostics['google']['enabled'] ?? false),
+            'microsoft_enabled' => (bool) ($diagnostics['microsoft']['enabled'] ?? false),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'diagnostics' => $diagnostics,
+        ]);
+    }
+
     private function authUser()
     {
         return request()->attributes->get('auth_user');
@@ -115,6 +131,8 @@ class AdminAuthProvidersController extends Controller
         if ($value === '') {
             return null;
         }
+
+        $value = $this->normalizeRedirectUri($value, $expectedPath);
 
         $parts = parse_url($value);
         if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
@@ -136,6 +154,23 @@ class AdminAuthProvidersController extends Controller
             throw ValidationException::withMessages([
                 $field => 'Redirect URI moet eindigen op ' . $expectedPath,
             ]);
+        }
+
+        return $value;
+    }
+
+    private function normalizeRedirectUri(string $value, string $expectedPath): string
+    {
+        if (!preg_match('#^https?://#i', $value)) {
+            $value = 'https://' . ltrim($value, '/');
+        }
+
+        $parts = parse_url($value);
+        if (is_array($parts)) {
+            $path = $parts['path'] ?? '';
+            if ($path === '' || $path === '/') {
+                return rtrim($value, '/') . $expectedPath;
+            }
         }
 
         return $value;

@@ -18,6 +18,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
+use Symfony\Component\Process\Process;
 
 class DocumentController extends Controller
 {
@@ -79,11 +81,6 @@ class DocumentController extends Controller
             ], 422);
         }
 
-        $this->virusScanStub($primaryFile->getClientOriginalName());
-        if ($backFile && $backFile->isValid()) {
-            $this->virusScanStub($backFile->getClientOriginalName());
-        }
-
         $ocrConfidenceFront = $request->input('ocr_confidence_front', $request->input('ocr_confidence'));
         $ocrConfidenceBack = $request->input('ocr_confidence_back');
         if ($ocrConfidenceFront !== null && (float) $ocrConfidenceFront < 40.0) {
@@ -100,20 +97,23 @@ class DocumentController extends Controller
         }
 
         $frontStored = $this->storeSecureFile($primaryFile);
-        if (!$frontStored) {
+        if (!($frontStored['ok'] ?? false)) {
             return response()->json([
-                'code' => 'STORE_FAILED',
-                'message' => 'Could not store the uploaded file. Please try again.',
-            ], 500);
+                'code' => $frontStored['code'] ?? 'STORE_FAILED',
+                'message' => $frontStored['message'] ?? 'Could not store the uploaded file. Please try again.',
+            ], ($frontStored['http_status'] ?? 500));
         }
         $backStored = null;
         if ($backFile && $backFile->isValid()) {
             $backStored = $this->storeSecureFile($backFile);
-            if (!$backStored) {
+            if (!($backStored['ok'] ?? false)) {
+                if (!empty($frontStored['path'])) {
+                    Storage::disk('local')->delete($frontStored['path']);
+                }
                 return response()->json([
-                    'code' => 'STORE_FAILED',
-                    'message' => 'Could not store the back side file. Please try again.',
-                ], 500);
+                    'code' => $backStored['code'] ?? 'STORE_FAILED',
+                    'message' => $backStored['message'] ?? 'Could not store the back side file. Please try again.',
+                ], ($backStored['http_status'] ?? 500));
             }
         }
 
@@ -126,6 +126,12 @@ class DocumentController extends Controller
             ->first();
 
         if ($existing) {
+            if (!empty($frontStored['path'])) {
+                Storage::disk('local')->delete($frontStored['path']);
+            }
+            if (!empty($backStored['path'])) {
+                Storage::disk('local')->delete($backStored['path']);
+            }
             return response()->json([
                 'code' => 'DUPLICATE_DOCUMENT',
                 'message' => 'This document was already uploaded for this company.',
@@ -154,6 +160,10 @@ class DocumentController extends Controller
                 'ocr_confidence_front' => $ocrConfidenceFront,
                 'ocr_text_back' => $request->input('ocr_text_back'),
                 'ocr_confidence_back' => $ocrConfidenceBack,
+                'upload_scan' => array_values(array_filter([
+                    $frontStored['scan'] ?? null,
+                    $backStored['scan'] ?? null,
+                ])),
                 'uploaded_files' => array_values(array_filter([
                     [
                         'side' => 'FRONT',
@@ -204,7 +214,7 @@ class DocumentController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'document' => $document,
+            'document' => $this->withUiStatus($document),
         ], 201);
     }
 
@@ -250,36 +260,32 @@ class DocumentController extends Controller
                 continue;
             }
 
-            $this->virusScanStub($file->getClientOriginalName());
+            $stored = $this->storeSecureFile($file);
+            if (!($stored['ok'] ?? false)) {
+                $results[] = [
+                    'filename' => $file->getClientOriginalName(),
+                    'status' => 'error',
+                    'code' => $stored['code'] ?? 'STORE_FAILED',
+                    'message' => $stored['message'] ?? 'Could not store uploaded file.',
+                ];
+                continue;
+            }
 
-            $quarantinePath = $file->store('uploads/quarantine');
-            $hash = hash_file('sha256', $file->getRealPath() ?: storage_path('app/' . $quarantinePath));
+            $hash = (string) ($stored['hash'] ?? '');
 
             $existing = Document::where('company_id', $company->id)
                 ->where('file_hash_sha256', $hash)
                 ->first();
 
             if ($existing) {
+                if (!empty($stored['path'])) {
+                    Storage::disk('local')->delete($stored['path']);
+                }
                 $results[] = [
                     'filename' => $file->getClientOriginalName(),
                     'status' => 'duplicate',
                     'document_id' => $existing->id,
                     'color' => $this->statusColor($existing->status ?? 'MISSING'),
-                ];
-                continue;
-            }
-
-            $secureFilename = Str::uuid() . '_' . $file->getClientOriginalName();
-            $securePath = 'uploads/secure/' . $secureFilename;
-            Storage::disk('local')->move($quarantinePath, $securePath);
-            if (!Storage::disk('local')->exists($securePath)) {
-                Storage::disk('local')->putFileAs('uploads/secure', $file, $secureFilename);
-            }
-            if (!Storage::disk('local')->exists($securePath)) {
-                $results[] = [
-                    'filename' => $file->getClientOriginalName(),
-                    'status' => 'error',
-                    'code' => 'STORE_FAILED',
                 ];
                 continue;
             }
@@ -290,11 +296,14 @@ class DocumentController extends Controller
                 'category_selected' => $category,
                 'is_baseline' => $isBaselineCategory,
                 'status' => 'PROCESSING',
-                'source_file_url' => $securePath,
+                'source_file_url' => $stored['path'],
                 'file_hash_sha256' => $hash,
-                'mime_type' => $file->getClientMimeType(),
-                'original_filename' => $file->getClientOriginalName(),
-                'file_size' => $file->getSize(),
+                'mime_type' => $stored['mime_type'] ?? $file->getClientMimeType(),
+                'original_filename' => $stored['original_filename'] ?? $file->getClientOriginalName(),
+                'file_size' => $stored['file_size'] ?? $file->getSize(),
+                'extracted_data' => array_values(array_filter([
+                    $stored['scan'] ?? null,
+                ])) ? ['upload_scan' => [$stored['scan']]] : null,
             ]);
 
             ProcessDocument::dispatch($document->id);
@@ -571,7 +580,16 @@ class DocumentController extends Controller
         $ui = $mapping[$document->status] ?? ['label' => 'Unknown', 'action' => 'Bekijk'];
         $color = $this->statusColor($document->status);
 
-        return array_merge($document->toArray(), [
+        $payload = $document->toArray();
+        if (!$this->settingBool('ai_expose_debug_meta_to_user', false)) {
+            $extracted = $payload['extracted_data'] ?? null;
+            if (is_array($extracted)) {
+                unset($extracted['ai_debug_full'], $extracted['ai_debug_meta'], $extracted['upload_scan']);
+                $payload['extracted_data'] = $extracted;
+            }
+        }
+
+        return array_merge($payload, [
             'ui_label' => $ui['label'],
             'recommended_action' => $ui['action'],
             'color' => $color,
@@ -594,11 +612,6 @@ class DocumentController extends Controller
         return $colors[$status] ?? 'Grijs';
     }
 
-    private function virusScanStub(string $filename): void
-    {
-        Log::info('Virus scan skipped (stub).', ['filename' => $filename]);
-    }
-
     private function ensureStorageReady(): bool
     {
         $disk = Storage::disk('local');
@@ -609,27 +622,67 @@ class DocumentController extends Controller
         return is_dir($path) && is_writable($path);
     }
 
-    private function storeSecureFile(UploadedFile $file): ?array
+    private function storeSecureFile(UploadedFile $file): array
     {
         $quarantinePath = $file->store('uploads/quarantine');
-        $hash = hash_file('sha256', $file->getRealPath() ?: storage_path('app/' . $quarantinePath));
+        if (!$quarantinePath) {
+            return [
+                'ok' => false,
+                'code' => 'STORE_FAILED',
+                'message' => 'Could not store uploaded file in quarantine.',
+                'http_status' => 500,
+            ];
+        }
+
+        $disk = Storage::disk('local');
+        $absoluteQuarantinePath = $disk->path($quarantinePath);
+        $hash = hash_file('sha256', $absoluteQuarantinePath);
+        if (!is_string($hash) || $hash === '') {
+            $disk->delete($quarantinePath);
+            return [
+                'ok' => false,
+                'code' => 'STORE_FAILED',
+                'message' => 'Could not checksum uploaded file.',
+                'http_status' => 500,
+            ];
+        }
+
+        $scan = $this->scanUploadedFile($absoluteQuarantinePath, $file->getClientOriginalName());
+        if (($scan['blocked'] ?? false) === true) {
+            $disk->delete($quarantinePath);
+            return [
+                'ok' => false,
+                'code' => $scan['code'] ?? 'MALWARE_DETECTED',
+                'message' => $scan['message'] ?? 'Uploaded file failed malware scan.',
+                'http_status' => $scan['http_status'] ?? 422,
+                'scan' => $scan['meta'] ?? null,
+            ];
+        }
 
         $secureFilename = Str::uuid() . '_' . $file->getClientOriginalName();
         $securePath = 'uploads/secure/' . $secureFilename;
-        Storage::disk('local')->move($quarantinePath, $securePath);
-        if (!Storage::disk('local')->exists($securePath)) {
-            Storage::disk('local')->putFileAs('uploads/secure', $file, $secureFilename);
+        $disk->move($quarantinePath, $securePath);
+        if (!$disk->exists($securePath)) {
+            $disk->putFileAs('uploads/secure', $file, $secureFilename);
         }
-        if (!Storage::disk('local')->exists($securePath)) {
-            return null;
+        if (!$disk->exists($securePath)) {
+            return [
+                'ok' => false,
+                'code' => 'STORE_FAILED',
+                'message' => 'Could not move uploaded file to secure storage.',
+                'http_status' => 500,
+                'scan' => $scan['meta'] ?? null,
+            ];
         }
 
         return [
+            'ok' => true,
             'path' => $securePath,
             'hash' => $hash,
             'mime_type' => $file->getClientMimeType(),
             'original_filename' => $file->getClientOriginalName(),
             'file_size' => $file->getSize(),
+            'scan' => $scan['meta'] ?? null,
         ];
     }
 
@@ -667,6 +720,138 @@ class DocumentController extends Controller
             'message' => 'Dit documenttype is niet beschikbaar voor dit bedrijfstype.',
             'allowed_categories' => $allowed,
         ], 422);
+    }
+
+    private function settingBool(string $key, bool $default = false): bool
+    {
+        try {
+            $val = \App\Models\AppSetting::getValue($key);
+            if ($val === null) {
+                return $default;
+            }
+            return in_array($val, [true, 'true', '1', 1], true);
+        } catch (\Throwable $e) {
+            return $default;
+        }
+    }
+
+    private function settingInt(string $key, int $default, int $min, int $max): int
+    {
+        try {
+            $val = \App\Models\AppSetting::getValue($key);
+            if ($val === null || $val === '') {
+                return $default;
+            }
+            return max($min, min($max, (int) $val));
+        } catch (\Throwable $e) {
+            return $default;
+        }
+    }
+
+    private function settingEnum(string $key, array $allowed, string $default): string
+    {
+        try {
+            $raw = strtoupper(trim((string) \App\Models\AppSetting::getValue($key, $default)));
+            return in_array($raw, $allowed, true) ? $raw : $default;
+        } catch (\Throwable $e) {
+            return $default;
+        }
+    }
+
+    private function scanUploadedFile(string $absolutePath, string $originalFilename): array
+    {
+        $mode = $this->settingEnum('upload_malware_scan_mode', ['OFF', 'WARN', 'ENFORCE'], 'OFF');
+        if ($mode === 'OFF') {
+            return [
+                'blocked' => false,
+                'meta' => [
+                    'filename' => $originalFilename,
+                    'status' => 'SKIPPED',
+                    'mode' => $mode,
+                ],
+            ];
+        }
+
+        $binary = trim((string) \App\Models\AppSetting::getValue('upload_malware_scan_binary', 'clamscan'));
+        if ($binary === '') {
+            $binary = 'clamscan';
+        }
+        $timeoutSeconds = $this->settingInt('upload_malware_scan_timeout_seconds', 20, 5, 120);
+        $blockOnError = $this->settingBool('upload_malware_scan_block_on_error', false);
+
+        $process = new Process([$binary, '--no-summary', $absolutePath]);
+        $process->setTimeout($timeoutSeconds);
+
+        $exitCode = null;
+        $output = '';
+        $error = null;
+        try {
+            $process->run();
+            $exitCode = $process->getExitCode();
+            $output = trim($process->getOutput() . "\n" . $process->getErrorOutput());
+        } catch (ProcessTimedOutException $e) {
+            $error = 'Virus scan timed out.';
+        } catch (\Throwable $e) {
+            $error = 'Virus scan command failed.';
+        }
+
+        $infected = false;
+        if ($error === null) {
+            $infected = ($exitCode === 1) || str_contains(strtoupper($output), 'FOUND');
+        }
+        $scanError = $error !== null || ($exitCode !== null && $exitCode > 1);
+        $blocked = ($mode === 'ENFORCE' && $infected) || ($scanError && $blockOnError);
+
+        $meta = [
+            'filename' => $originalFilename,
+            'mode' => $mode,
+            'status' => $infected ? 'INFECTED' : ($scanError ? 'ERROR' : 'CLEAN'),
+            'engine' => $binary,
+            'exit_code' => $exitCode,
+            'scanned_at' => now()->toIso8601String(),
+        ];
+
+        if ($infected) {
+            Log::warning('Malware scan flagged file.', [
+                'filename' => $originalFilename,
+                'mode' => $mode,
+            ]);
+        }
+
+        if ($scanError) {
+            $snippet = $error ?: ('Scanner exit code ' . (string) $exitCode);
+            \App\Models\AppSetting::setValue('upload_malware_scan_last_error_at', now()->toDateTimeString());
+            \App\Models\AppSetting::setValue('upload_malware_scan_last_error', $snippet);
+            Log::warning('Malware scan error.', [
+                'filename' => $originalFilename,
+                'mode' => $mode,
+                'error' => $snippet,
+            ]);
+        }
+
+        if ($blocked) {
+            if ($infected) {
+                return [
+                    'blocked' => true,
+                    'code' => 'MALWARE_DETECTED',
+                    'message' => 'Upload blocked: malware detected.',
+                    'http_status' => 422,
+                    'meta' => $meta,
+                ];
+            }
+            return [
+                'blocked' => true,
+                'code' => 'SCAN_UNAVAILABLE',
+                'message' => 'Upload blocked: malware scanner unavailable.',
+                'http_status' => 503,
+                'meta' => $meta,
+            ];
+        }
+
+        return [
+            'blocked' => false,
+            'meta' => $meta,
+        ];
     }
 
 }

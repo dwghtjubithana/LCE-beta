@@ -167,3 +167,50 @@ body {
 /* Modal Backdrop Fade */
 .modal-enter { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
 .modal-active { opacity: 1; pointer-events: auto; }
+
+.oauth-stack {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--wap-border);
+  display: grid;
+  gap: 10px;
+}
+
+.oauth-login-btn {
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--wap-border);
+  color: var(--wap-text);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  background: #fff;
+}
+
+.oauth-login-btn svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.oauth-google:hover {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.03);
+}
+
+.oauth-microsoft:hover {
+  border-color: rgba(14, 165, 164, 0.35);
+  background: rgba(14, 165, 164, 0.04);
+}
+
+@media (max-width: 640px) {
+  .oauth-login-btn {
+    font-size: 13px;
+  }
+}

@@ -386,6 +386,40 @@
             margin-top: 6px;
         }
         .status.ok { color: #059669; }
+        .oauth-wrap {
+            display: none;
+            margin-top: 12px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 12px;
+            gap: 10px;
+        }
+        .oauth-btn {
+            width: 100%;
+            justify-content: center;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            min-height: 44px;
+        }
+        .oauth-btn svg {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 18px;
+        }
+        .oauth-btn span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .oauth-btn-google:hover {
+            border-color: rgba(59, 130, 246, 0.35);
+            background: rgba(59, 130, 246, 0.03);
+        }
+        .oauth-btn-microsoft:hover {
+            border-color: rgba(14, 165, 164, 0.35);
+            background: rgba(14, 165, 164, 0.04);
+        }
 
         @media (max-width: 940px) {
             .hero-grid { grid-template-columns: 1fr; }
@@ -425,6 +459,8 @@
             .hero { padding-top: 24px; }
             .section-block { padding: 20px 16px; }
             .lead-card { padding: 22px 14px; }
+            .modal-card { padding: 18px; }
+            .oauth-btn { font-size: 13px; }
         }
     </style>
 </head>
@@ -570,9 +606,25 @@
                     <input id="loginPassword" type="password" required placeholder="Minimaal 8 karakters">
                 </div>
                 <button class="btn btn-primary" type="submit" style="width:100%;">Inloggen</button>
-                <div id="landingOauthButtons" style="display:none; margin-top:10px; border-top:1px solid #e2e8f0; padding-top:10px; gap:8px;">
-                    <a id="landingGoogleLoginBtn" class="btn btn-ghost" href="#" style="width:100%; justify-content:center;">Inloggen met Google</a>
-                    <a id="landingMicrosoftLoginBtn" class="btn btn-ghost" href="#" style="width:100%; justify-content:center;">Inloggen met Microsoft</a>
+                <div id="landingOauthButtons" class="oauth-wrap">
+                    <a id="landingGoogleLoginBtn" class="btn btn-ghost oauth-btn oauth-btn-google" href="#">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M21.35 12.23c0-.73-.06-1.43-.18-2.1H12v3.98h5.24a4.48 4.48 0 0 1-1.94 2.94v2.44h3.13c1.84-1.7 2.92-4.2 2.92-7.26Z" fill="#4285F4"/>
+                            <path d="M12 21.75c2.63 0 4.83-.87 6.44-2.36l-3.13-2.44c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.52A9.74 9.74 0 0 0 12 21.75Z" fill="#34A853"/>
+                            <path d="M6.54 13.84a5.86 5.86 0 0 1 0-3.68V7.64H3.3a9.75 9.75 0 0 0 0 8.72l3.24-2.52Z" fill="#FBBC05"/>
+                            <path d="M12 6.13c1.43 0 2.72.49 3.73 1.45l2.8-2.8C16.83 3.19 14.63 2.25 12 2.25A9.74 9.74 0 0 0 3.3 7.64l3.24 2.52c.77-2.31 2.92-4.03 5.46-4.03Z" fill="#EA4335"/>
+                        </svg>
+                        <span>Inloggen met Google</span>
+                    </a>
+                    <a id="landingMicrosoftLoginBtn" class="btn btn-ghost oauth-btn oauth-btn-microsoft" href="#">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <rect x="3" y="3" width="8" height="8" rx="1" fill="#F25022"/>
+                            <rect x="13" y="3" width="8" height="8" rx="1" fill="#7FBA00"/>
+                            <rect x="3" y="13" width="8" height="8" rx="1" fill="#00A4EF"/>
+                            <rect x="13" y="13" width="8" height="8" rx="1" fill="#FFB900"/>
+                        </svg>
+                        <span>Inloggen met Microsoft</span>
+                    </a>
                 </div>
                 <div id="loginStatus" class="status"></div>
             </form>

@@ -10,8 +10,19 @@ class GeminiService
 
     public function __construct()
     {
+        $timeout = 60;
+        try {
+            $configured = \App\Models\AppSetting::getValue('gemini_timeout_seconds', 60);
+            $timeout = (int) $configured;
+            if ($timeout < 5 || $timeout > 180) {
+                $timeout = 60;
+            }
+        } catch (\Throwable $e) {
+            $timeout = 60;
+        }
+
         $this->client = new Client([
-            'timeout' => 60,
+            'timeout' => $timeout,
         ]);
     }
 

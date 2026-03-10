@@ -14,6 +14,9 @@ class AdminBasicAuth
         $pass = env('ADMIN_BASIC_PASS');
 
         if (!$user || !$pass) {
+            if (app()->environment('production')) {
+                return response('Admin basic auth is misconfigured.', 503);
+            }
             return $next($request);
         }
 

@@ -4,6 +4,8 @@
 @php($active = 'ai-settings')
 
 @section('content')
+@include('admin.partials.settings-subnav')
+
 <div class="page-header">
     <div>
         <h2>AI-instellingen</h2>
@@ -141,7 +143,7 @@
             return;
         }
         const s = data.settings || {};
-        document.getElementById('ai-key').value = s.gemini_api_key ? '********' : '';
+        document.getElementById('ai-key').value = s.gemini_api_key_set ? '********' : '';
         document.getElementById('ai-model-validation').value = s.gemini_model_validation || '';
         document.getElementById('ai-model-summary').value = s.gemini_model_summary || '';
         document.getElementById('ai-debug').value = s.gemini_debug_full ?? '';
@@ -156,8 +158,9 @@
 
     async function saveAiSettings() {
         const statusEl = document.getElementById('ai-status');
+        const keyValue = document.getElementById('ai-key').value.trim();
         const payload = {
-            gemini_api_key: document.getElementById('ai-key').value.trim() || null,
+            gemini_api_key: (keyValue === '' || keyValue === '********') ? null : keyValue,
             gemini_model_validation: document.getElementById('ai-model-validation').value.trim() || null,
             gemini_model_summary: document.getElementById('ai-model-summary').value.trim() || null,
             gemini_debug_full: document.getElementById('ai-debug').value === '' ? null : document.getElementById('ai-debug').value === '1',
