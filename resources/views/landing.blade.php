@@ -665,6 +665,10 @@
         const loginModal = document.getElementById('loginModal');
         const registerModal = document.getElementById('registerModal');
         const tokenKey = 'lce_token';
+        const storeToken = (token) => {
+            sessionStorage.setItem(tokenKey, token);
+            localStorage.removeItem(tokenKey);
+        };
 
         function openModal(name) {
             if (name === 'login') loginModal.classList.add('open');
@@ -766,7 +770,7 @@
                     setStatus(status, readError(data, 'Inloggen mislukt.'));
                     return;
                 }
-                localStorage.setItem(tokenKey, data.token);
+                storeToken(data.token);
                 setStatus(status, 'Succesvol ingelogd. Doorsturen...', true);
                 window.location.href = '/dashboard';
             } catch (err) {
@@ -803,7 +807,7 @@
                     setStatus(status, 'Registratie gelukt, maar inloggen kon niet automatisch. Log handmatig in.', true);
                     return;
                 }
-                localStorage.setItem(tokenKey, data.token);
+                storeToken(data.token);
                 setStatus(status, 'Account aangemaakt. Doorsturen...', true);
                 window.location.href = '/dashboard';
             } catch (err) {

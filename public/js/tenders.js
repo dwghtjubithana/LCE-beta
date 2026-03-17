@@ -1,5 +1,5 @@
 const API_BASE = '/api';
-const token = localStorage.getItem('lce_token');
+const token = sessionStorage.getItem('lce_token') || localStorage.getItem('lce_token');
 
 const state = {
   tenders: [],
@@ -114,7 +114,7 @@ function openModal(tender) {
   } else {
     link?.classList.remove('hidden');
     upgrade?.classList.add('hidden');
-    if (link) link.href = tender.details_url || '#';
+    if (link) link.href = safeExternalUrl(tender.details_url) || '#';
   }
 
   modal.classList.remove('hidden');
@@ -167,4 +167,17 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function safeExternalUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(String(value), window.location.origin);
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return url.href;
+    }
+    return '';
+  } catch {
+    return '';
+  }
 }

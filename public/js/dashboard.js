@@ -1,5 +1,5 @@
 const API_BASE = '/api';
-let authToken = localStorage.getItem('lce_token');
+let authToken = getStoredToken();
 let currentUser = null;
 let currentCompany = null;
 let pendingFrontFile = null;
@@ -449,7 +449,7 @@ loginForm.addEventListener('submit', async (e) => {
     if (!data.token) throw new Error('Geen token ontvangen van server');
 
     authToken = data.token;
-    localStorage.setItem('lce_token', authToken);
+    storeAuthToken(authToken);
 
     // Restart flow
     initializeSession();
@@ -463,7 +463,7 @@ loginForm.addEventListener('submit', async (e) => {
 }
 
 function handleLogout() {
-  localStorage.removeItem('lce_token');
+  clearStoredToken();
   location.reload();
 }
 
@@ -731,7 +731,7 @@ async function fetchDocuments() {
     });
 
     if (!res.ok) {
-      tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-red-500 font-medium">Server fout (${res.status}): Kan documenten niet ophalen.</td></tr>`;
+      tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-red-500 font-medium">We konden je documenten nu niet laden. Probeer opnieuw.</td></tr>';
       return;
     }
 
@@ -1958,6 +1958,33 @@ async function apiFetch(path, options = {}) {
   return fetch(`${API_BASE}${path}`, { ...options, headers });
 }
 
+function getStoredToken() {
+  return sessionStorage.getItem('lce_token') || localStorage.getItem('lce_token');
+}
+
+function storeAuthToken(token) {
+  sessionStorage.setItem('lce_token', token);
+  localStorage.removeItem('lce_token');
+}
+
+function clearStoredToken() {
+  sessionStorage.removeItem('lce_token');
+  localStorage.removeItem('lce_token');
+}
+
+function safeExternalUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(String(value), window.location.origin);
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return url.href;
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
+
 function initUserTendersPage() {
   const listEl = document.getElementById('tendersList');
   const myListEl = document.getElementById('myTendersList');
@@ -2048,12 +2075,12 @@ function initUserTendersPage() {
       const res = await apiFetch('/tenders');
       const data = await res.json();
       if (!res.ok) {
-        listEl.innerHTML = `<p class="text-sm text-red-500">${data.message || 'Aanbestedingen ophalen mislukt.'}</p>`;
+        listEl.innerHTML = `<p class="text-sm text-red-500">${escapeHtml(data.message || 'Aanbestedingen ophalen mislukt.')}</p>`;
         return;
       }
       renderTenderList(listEl, data.tenders || []);
     } catch (err) {
-      listEl.innerHTML = `<p class="text-sm text-red-500">${err?.message || 'Aanbestedingen ophalen mislukt.'}</p>`;
+      listEl.innerHTML = `<p class="text-sm text-red-500">${escapeHtml(err?.message || 'Aanbestedingen ophalen mislukt.')}</p>`;
     }
   }
 
@@ -2063,12 +2090,12 @@ function initUserTendersPage() {
       const res = await apiFetch('/tenders/mine');
       const data = await res.json();
       if (!res.ok) {
-        myListEl.innerHTML = `<p class="text-sm text-red-500">${data.message || 'Inzendingen ophalen mislukt.'}</p>`;
+        myListEl.innerHTML = `<p class="text-sm text-red-500">${escapeHtml(data.message || 'Inzendingen ophalen mislukt.')}</p>`;
         return;
       }
       renderMyTenderList(myListEl, data.tenders || []);
     } catch (err) {
-      myListEl.innerHTML = `<p class="text-sm text-red-500">${err?.message || 'Inzendingen ophalen mislukt.'}</p>`;
+      myListEl.innerHTML = `<p class="text-sm text-red-500">${escapeHtml(err?.message || 'Inzendingen ophalen mislukt.')}</p>`;
     }
   }
 
@@ -2079,16 +2106,19 @@ function initUserTendersPage() {
     }
     const html = items.map((tender) => {
       const tag = tender.is_direct_work ? '<span class="px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700">Direct werk</span>' : '';
-      const date = tender.date ? new Date(tender.date).toLocaleDateString('nl-NL') : 'Onbekend';
-      const url = tender.details_url ? `<a href="${tender.details_url}" target="_blank" rel="noopener" class="text-blue-600 text-sm">Details bekijken</a>` : '<span class="text-slate-400 text-sm">Details afgeschermd</span>';
-      const description = tender.description || 'Geen omschrijving beschikbaar.';
+      const date = escapeHtml(tender.date ? new Date(tender.date).toLocaleDateString('nl-NL') : 'Onbekend');
+      const safeUrl = safeExternalUrl(tender.details_url);
+      const url = safeUrl ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 text-sm">Details bekijken</a>` : '<span class="text-slate-400 text-sm">Details afgeschermd</span>';
+      const title = escapeHtml(tender.title || tender.project || 'Aanbesteding');
+      const client = escapeHtml(tender.client || 'Onbekend');
+      const description = escapeHtml(tender.description || 'Geen omschrijving beschikbaar.');
       const attachmentCount = Array.isArray(tender.attachments) ? tender.attachments.length : 0;
       return `
         <div class="border border-slate-200 rounded-xl p-4 mb-3">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <h4 class="font-semibold text-slate-800">${tender.title || tender.project || 'Aanbesteding'}</h4>
-              <p class="text-xs text-slate-500 mt-1">Opdrachtgever: ${tender.client || 'Onbekend'} • Datum: ${date}</p>
+              <h4 class="font-semibold text-slate-800">${title}</h4>
+              <p class="text-xs text-slate-500 mt-1">Opdrachtgever: ${client} • Datum: ${date}</p>
             </div>
             ${tag}
           </div>
@@ -2114,18 +2144,21 @@ function initUserTendersPage() {
 
     const html = items.map((tender) => {
       const status = statusMap[tender.status] || { label: tender.status || 'Onbekend', cls: 'bg-slate-100 text-slate-600' };
-      const submitted = tender.submitted_at ? new Date(tender.submitted_at).toLocaleString('nl-NL') : 'Onbekend';
+      const submitted = escapeHtml(tender.submitted_at ? new Date(tender.submitted_at).toLocaleString('nl-NL') : 'Onbekend');
       const attachmentCount = Array.isArray(tender.attachments) ? tender.attachments.length : 0;
+      const title = escapeHtml(tender.title || tender.project || 'Aanbesteding');
+      const safeStatusLabel = escapeHtml(status.label);
+      const description = escapeHtml(tender.description || 'Geen omschrijving beschikbaar.');
       return `
         <div class="border border-slate-200 rounded-xl p-4 mb-3">
           <div class="flex items-center justify-between gap-3 flex-wrap">
             <div>
-              <h4 class="font-semibold text-slate-800">${tender.title || tender.project || 'Aanbesteding'}</h4>
+              <h4 class="font-semibold text-slate-800">${title}</h4>
               <p class="text-xs text-slate-500 mt-1">Ingestuurd op ${submitted}</p>
             </div>
-            <span class="px-2 py-0.5 text-xs rounded-full ${status.cls}">${status.label}</span>
+            <span class="px-2 py-0.5 text-xs rounded-full ${status.cls}">${safeStatusLabel}</span>
           </div>
-          <p class="text-sm text-slate-600 mt-2">${tender.description || 'Geen omschrijving beschikbaar.'}</p>
+          <p class="text-sm text-slate-600 mt-2">${description}</p>
           <p class="text-xs text-slate-500 mt-2">Bijlagen: ${attachmentCount}</p>
         </div>
       `;

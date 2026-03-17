@@ -1,5 +1,5 @@
 const API_BASE = '/api';
-const token = localStorage.getItem('lce_token');
+const token = sessionStorage.getItem('lce_token') || localStorage.getItem('lce_token');
 
 document.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
@@ -42,7 +42,7 @@ function renderTender(tender) {
   } else {
     link?.classList.remove('hidden');
     upgrade?.classList.add('hidden');
-    if (link) link.href = tender.details_url || '#';
+    if (link) link.href = safeExternalUrl(tender.details_url) || '#';
   }
 }
 
@@ -64,4 +64,17 @@ function formatDate(value) {
 function setText(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
+}
+
+function safeExternalUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(String(value), window.location.origin);
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return url.href;
+    }
+    return '';
+  } catch {
+    return '';
+  }
 }

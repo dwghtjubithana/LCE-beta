@@ -156,8 +156,8 @@
             <div class="flex items-center gap-4">
                 <h2 class="text-lg font-bold text-slate-800">@yield('page_title')</h2>
             </div>
-            <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2">
+            <div class="hidden sm:flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2">
                     <a href="/dashboard" class="px-3 py-1.5 rounded-lg border text-xs font-semibold transition {{ ($active ?? '') === 'dashboard' ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-100' }}">Dashboard</a>
                     <a href="/documents" class="px-3 py-1.5 rounded-lg border text-xs font-semibold transition {{ ($active ?? '') === 'documents' ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-100' }}">Documenten</a>
                 </div>
