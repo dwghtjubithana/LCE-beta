@@ -653,7 +653,7 @@ async function renderContracts() {
             return;
         }
 
-        // Render Table Wapcore Style
+        // Render Table SuriCore LCE Style
         const table = document.createElement('div');
         table.className = "overflow-x-auto";
         table.innerHTML = `

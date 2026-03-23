@@ -307,7 +307,7 @@
                 <h3>Settings</h3>
                 <a href="/admin/settings" class="{{ ($active ?? '') === 'settings' ? 'active' : '' }}">Settings Home</a>
                 <a href="/admin/system" class="{{ ($active ?? '') === 'system' ? 'active' : '' }}">System Status</a>
-                <a href="/admin/ai-settings" class="{{ ($active ?? '') === 'ai-settings' ? 'active' : '' }}">AI Settings</a>
+                <a href="/admin/ai-settings" class="{{ ($active ?? '') === 'ai-settings' ? 'active' : '' }}">Document Analysis</a>
                 <a href="/admin/email-settings" class="{{ ($active ?? '') === 'email-settings' ? 'active' : '' }}">Email Settings</a>
                 <a href="/admin/auth-providers" class="{{ ($active ?? '') === 'auth-providers' ? 'active' : '' }}">Auth Providers</a>
             </nav>

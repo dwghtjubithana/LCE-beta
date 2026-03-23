@@ -8,7 +8,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Wapcore - Local Content Engine Dashboard</title>
+    <title>SuriCore LCE - Local Content Engine Dashboard</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -32,9 +32,9 @@
 
             <div class="flex flex-col items-center mb-6">
 
-                <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-20 h-auto object-contain mb-4">
+                <img src="/public/img/logo-lce.png" alt="SuriCore LCE logo" class="w-20 h-auto object-contain mb-4">
 
-                <h2 class="text-2xl font-bold text-slate-800">Wapcore Login</h2>
+                <h2 class="text-2xl font-bold text-slate-800">SuriCore LCE Login</h2>
 
                 <p class="text-slate-500 text-sm mt-1">Log in om toegang te krijgen tot de Local Content Engine</p>
 
@@ -80,7 +80,7 @@
 
         <div class="p-6">
 
-            <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-36 h-auto object-contain">
+            <img src="/public/img/logo-lce.png" alt="SuriCore LCE logo" class="w-36 h-auto object-contain">
 
         </div>
 
@@ -478,7 +478,7 @@
                     <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
                         <div>
                             <h3 class="font-bold text-slate-800 text-lg">Upgrade & Betaling</h3>
-                            <p class="text-sm text-slate-500">Upgrade om AI‑analyse en extra functies te ontgrendelen.</p>
+                            <p class="text-sm text-slate-500">Upgrade om documentanalyse en extra functies te ontgrendelen.</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-200 text-slate-700" id="planBadge">PLAN: FREE</span>
@@ -489,11 +489,11 @@
                         <div class="p-4 rounded-xl border border-slate-200 bg-white">
                             <h4 class="font-bold text-slate-800">FREE</h4>
                             <p class="text-sm text-slate-500 mt-1">Uploaden en basisstatus</p>
-                            <p class="text-xs text-slate-400 mt-2">AI‑analyse: niet beschikbaar</p>
+                            <p class="text-xs text-slate-400 mt-2">Documentanalyse: niet beschikbaar</p>
                         </div>
                         <div class="p-4 rounded-xl border border-slate-200 bg-white">
                             <h4 class="font-bold text-slate-800">PRO</h4>
-                            <p class="text-sm text-slate-500 mt-1">AI‑analyse + advies</p>
+                            <p class="text-sm text-slate-500 mt-1">Documentanalyse + advies</p>
                             <p class="text-xs text-slate-400 mt-2">Voor compliance checks</p>
                         </div>
                         <div class="p-4 rounded-xl border border-slate-200 bg-white">

@@ -19,7 +19,7 @@
         <p class="status">Gezondheid, metrics, en runtime status.</p>
     </a>
     <a href="/admin/ai-settings" class="card" style="display:block;">
-        <h3 style="margin-top:0;">AI Settings</h3>
+        <h3 style="margin-top:0;">Document Analysis</h3>
         <p class="status">Gemini modellen, guardrails, en OCR-beleid.</p>
     </a>
     <a href="/admin/email-settings" class="card" style="display:block;">
@@ -34,10 +34,10 @@
 
 <div class="card">
     <h3 style="margin-top:0;">Global Runtime Controls</h3>
-    <p class="status">Centrale instellingen voor AI-veiligheid en runtime gedrag.</p>
+    <p class="status">Centrale instellingen voor documentanalyse, veiligheid en runtime gedrag.</p>
     <div class="form-stack">
         <div class="form-field">
-            <label for="settings-ai-retries">AI validatie retries</label>
+            <label for="settings-ai-retries">Analyse-validatie retries</label>
             <input class="input" id="settings-ai-retries" type="number" min="0" max="3" placeholder="1">
             <p class="status">Aantal extra pogingen wanneer Gemini validatie een error geeft.</p>
         </div>

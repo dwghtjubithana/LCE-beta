@@ -68,8 +68,8 @@
         }
         document.getElementById('doc-summary').innerHTML = `
             <div><strong>${doc.original_filename || '—'}</strong></div>
-            <div class="status">Categorie: ${doc.category_selected || '—'}</div>
-            <div class="status">Gedetecteerd: ${doc.detected_type || '—'}</div>
+            <div class="status">Categorie: ${doc.category_display || doc.category_selected || '—'}</div>
+            <div class="status">Gedetecteerd: ${doc.detected_type_display || doc.detected_type || '—'}</div>
             <div class="status">Bedrijf ID: ${doc.company_id || '—'}</div>
             <div class="status">ID subtype: ${(doc.extracted_data && doc.extracted_data.id_subtype) ? doc.extracted_data.id_subtype : '—'}</div>
             <div class="actions" style="margin-top:10px;">
@@ -81,7 +81,7 @@
         document.getElementById('doc-status').innerHTML = `
             <div class="status">Status: <span class="badge ${statusLabel.className}">${statusLabel.label}</span></div>
             <div class="status">Vervaldatum: ${expiryLabel}</div>
-            <div class="status">AI Advies: ${doc.ai_feedback || '—'}</div>
+            <div class="status">Scanadvies: ${doc.ai_feedback || '—'}</div>
         `;
 
         document.getElementById('doc-data').innerHTML = renderExtractedData(extracted, debugEnabled);
@@ -137,7 +137,7 @@
 
         if (aiSummary) {
             sections.push(`<div class="card" style="margin-top:12px;">
-                <h4 style="margin-top:0;">AI Samenvatting</h4>
+                <h4 style="margin-top:0;">Samenvatting</h4>
                 <div class="status">${escapeHtml(aiSummary.summary || '—')}</div>
                 ${renderList('Bevindingen', aiSummary.findings)}
                 ${renderList('Ontbreekt', aiSummary.missing_items)}

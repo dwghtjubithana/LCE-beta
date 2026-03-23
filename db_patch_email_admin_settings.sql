@@ -55,7 +55,7 @@ INSERT IGNORE INTO `app_settings` (`key`, `value`) VALUES
 ('email_smtp_encryption', 'tls'),
 ('email_smtp_username', ''),
 ('email_smtp_password', ''),
-('email_from_name', 'Wapcore LCE'),
+('email_from_name', 'SuriCore LCE'),
 ('email_from_address', 'noreply@example.com'),
 ('email_reply_to_name', ''),
 ('email_reply_to_address', ''),
@@ -70,7 +70,7 @@ INSERT IGNORE INTO `app_settings` (`key`, `value`) VALUES
 
 -- Baseline templates.
 INSERT IGNORE INTO `email_templates` (`template_key`, `name`, `subject`, `body`, `is_active`) VALUES
-('welcome', 'Welcome', 'Welkom bij Wapcore LCE', 'Hallo {{name}},\n\nWelkom bij Wapcore LCE.\n\nJe account is aangemaakt en je kunt nu inloggen.\n\nGroet,\n{{app_name}}', 1),
+('welcome', 'Welcome', 'Welkom bij SuriCore LCE', 'Hallo {{name}},\n\nWelkom bij SuriCore LCE.\n\nJe account is aangemaakt en je kunt nu inloggen.\n\nGroet,\n{{app_name}}', 1),
 ('email_verification', 'Email Verification', 'Verifieer je e-mailadres', 'Hallo {{name}},\n\nKlik op deze link om je e-mailadres te verifiëren:\n{{verification_link}}\n\nDeze link verloopt over {{ttl_minutes}} minuten.\n\nGroet,\n{{app_name}}', 1),
 ('expiring_soon', 'Document Expiring Soon', 'Document verloopt binnenkort', 'Hallo {{name}},\n\nEen document verloopt binnenkort.\nType: {{document_type}}\nControleer je dashboard om dit bij te werken.\n\nGroet,\n{{app_name}}', 1),
-('test_email', 'Test Email', 'Test e-mail vanaf Wapcore LCE', 'Dit is een testmail om je e-mailinstellingen te valideren.\n\nTijdstip: {{timestamp}}\n\nGroet,\n{{app_name}}', 1);
+('test_email', 'Test Email', 'Test e-mail vanaf SuriCore LCE', 'Dit is een testmail om je e-mailinstellingen te valideren.\n\nTijdstip: {{timestamp}}\n\nGroet,\n{{app_name}}', 1);

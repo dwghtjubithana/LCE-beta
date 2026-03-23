@@ -17,7 +17,7 @@ body {
   color: var(--wap-text);
 }
 
-/* Align existing Tailwind utility usage with Wapcore branding */
+/* Align existing Tailwind utility usage with SuriCore LCE branding */
 .bg-slate-50 {
   background-color: var(--wap-soft-bg) !important;
 }

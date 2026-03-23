@@ -60,8 +60,19 @@
             <div><strong>${tender.title || tender.project || 'Aanbesteding'}</strong></div>
             <div class="status">Opdrachtgever: ${tender.client || '—'}</div>
             <div class="status">Datum: ${AdminApp.formatDate(tender.date)}</div>
+            <div class="status">Deadline: ${AdminApp.formatDate(tender.submission_deadline)}</div>
+            <div class="status">Locatie: ${tender.location || '—'}</div>
+            <div class="status">Sector: ${tender.sector || '—'}</div>
+            <div class="status">Referentie: ${tender.reference_code || '—'}</div>
+            <div class="status">Contracttype: ${tender.contract_type || '—'}</div>
+            <div class="status">Budgetlabel: ${tender.budget_label || '—'}</div>
             <div class="status">Details URL: ${tender.details_url || '—'}</div>
+            <div class="status">Bron: ${tender.source_name || '—'}</div>
+            <div class="status">Bron URL: ${tender.source_url || '—'}</div>
+            <div class="status">Cover image: ${tender.cover_image_url || '—'}</div>
+            <div class="status">Logo URL: ${tender.issuer_logo_url || '—'}</div>
             <div class="status">Omschrijving: ${tender.description || '—'}</div>
+            <div class="status">Geschiktheid: ${tender.eligibility || '—'}</div>
             <div class="status">Direct werk: ${tender.is_direct_work ? 'Ja' : 'Nee'}</div>
             <div class="status">Status: <span class="badge ${statusClass}">${statusLabel}</span></div>
             <div style="margin-top:10px;">

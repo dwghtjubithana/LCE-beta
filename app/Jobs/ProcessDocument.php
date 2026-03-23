@@ -120,7 +120,7 @@ class ProcessDocument implements ShouldQueue
 
         if ($this->settingBool('ai_require_gemini', true) && !$this->geminiKeyExists()) {
             $document->status = 'MANUAL_REVIEW';
-            $document->ai_feedback = 'AI-analyse is momenteel niet beschikbaar. Probeer later opnieuw.';
+            $document->ai_feedback = 'Automatische documentcontrole is momenteel niet beschikbaar. Probeer later opnieuw.';
             $document->ai_confidence = null;
             $document->extracted_data = $extractedData;
             $document->save();
@@ -309,9 +309,9 @@ class ProcessDocument implements ShouldQueue
 
         $document->status = $status;
         $document->ai_confidence = $confidence;
-        $baseFeedback = $summary['summary'] ?? ($result['reasons'] ? implode(' ', $result['reasons']) : 'AI-analyse voltooid.');
+        $baseFeedback = $summary['summary'] ?? ($result['reasons'] ? implode(' ', $result['reasons']) : 'Documentcontrole voltooid.');
         if ($validationFailed) {
-            $baseFeedback = 'AI-validatie kon niet betrouwbaar worden uitgevoerd. Het document staat op handmatige controle.';
+            $baseFeedback = 'De automatische validatie kon niet betrouwbaar worden uitgevoerd. Het document staat op handmatige controle.';
         }
         if ($ocrMissing) {
             $baseFeedback .= ' Let op: OCR kon geen leesbare tekst vinden. Analyse is gebaseerd op beeldherkenning en kan onvolledig zijn.';

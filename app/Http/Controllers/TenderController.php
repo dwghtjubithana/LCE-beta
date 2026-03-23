@@ -95,8 +95,19 @@ class TenderController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'project' => ['nullable', 'string', 'max:255'],
             'date' => ['nullable', 'date'],
+            'submission_deadline' => ['nullable', 'date'],
             'client' => ['nullable', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'sector' => ['nullable', 'string', 'max:255'],
+            'reference_code' => ['nullable', 'string', 'max:255'],
+            'contract_type' => ['nullable', 'string', 'max:255'],
+            'budget_label' => ['nullable', 'string', 'max:255'],
+            'eligibility' => ['nullable', 'string'],
             'details_url' => ['nullable', 'string', 'max:255'],
+            'source_name' => ['nullable', 'string', 'max:255'],
+            'source_url' => ['nullable', 'string', 'max:255'],
+            'cover_image_url' => ['nullable', 'string', 'max:255'],
+            'issuer_logo_url' => ['nullable', 'string', 'max:255'],
             'attachments' => ['nullable'],
             'attachments_urls' => ['nullable', 'string'],
             'attachments_files.*' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf,doc,docx', 'max:10240'],
@@ -200,22 +211,10 @@ class TenderController extends Controller
 
     private function applyGating(Tender $tender, User $user): array
     {
-        $isLevel3 = $this->isLevel3($user);
         $data = $tender->toArray();
         $data['contact_details'] = $data['client'] ?? null;
         $data['attachment_urls'] = $this->extractAttachmentUrls($data['attachments'] ?? null);
-
-        if (!$isLevel3) {
-            $data['description'] = $data['description'] ? str_repeat('•', 20) : null;
-            $data['details_url'] = null;
-            $data['attachments'] = null;
-            $data['contact_details'] = null;
-            $data['attachment_urls'] = [];
-            $data['is_blurred'] = true;
-        } else {
-            $data['is_blurred'] = false;
-        }
-
+        $data['is_blurred'] = false;
         return $data;
     }
 

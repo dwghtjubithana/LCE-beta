@@ -36,7 +36,7 @@ class AdminDocumentController extends Controller
         }
 
         $total = (clone $query)->count();
-        $documents = $query->forPage($page, $limit)->get();
+        $documents = $query->forPage($page, $limit)->get()->map(fn (Document $document) => $this->presentDocument($document));
 
         $audit->record($this->authUser(), 'admin.documents.view', 'document', null, [
             'limit' => $limit,
@@ -72,7 +72,7 @@ class AdminDocumentController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'document' => $document,
+            'document' => $this->presentDocument($document),
         ]);
     }
 
@@ -97,7 +97,7 @@ class AdminDocumentController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'document' => $document,
+            'document' => $this->presentDocument($document),
         ]);
     }
 
@@ -122,7 +122,7 @@ class AdminDocumentController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'document' => $document,
+            'document' => $this->presentDocument($document),
         ]);
     }
 
@@ -182,5 +182,15 @@ class AdminDocumentController extends Controller
             return $line;
         }
         return $base . ' ' . $line;
+    }
+
+    private function presentDocument(Document $document): array
+    {
+        $payload = $document->toArray();
+
+        return array_merge($payload, [
+            'category_display' => Document::displayType($document->category_selected),
+            'detected_type_display' => Document::displayType($document->detected_type),
+        ]);
     }
 }

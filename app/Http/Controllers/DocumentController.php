@@ -29,7 +29,7 @@ class DocumentController extends Controller
         if ($this->gatingEnabled() && !$this->canRunAi($user)) {
             return response()->json([
                 'code' => 'PLAN_RESTRICTED',
-                'message' => 'Upgrade required to run AI analysis.',
+                'message' => 'Upgrade required to run document analysis.',
             ], 403);
         }
         if (!$this->ensureStorageReady()) {
@@ -224,7 +224,7 @@ class DocumentController extends Controller
         if ($this->gatingEnabled() && !$this->canRunAi($user)) {
             return response()->json([
                 'code' => 'PLAN_RESTRICTED',
-                'message' => 'Upgrade required to run AI analysis.',
+                'message' => 'Upgrade required to run document analysis.',
             ], 403);
         }
         if (!$this->ensureStorageReady()) {
@@ -438,7 +438,7 @@ class DocumentController extends Controller
         if ($this->gatingEnabled() && !$this->canRunAi($user)) {
             return response()->json([
                 'code' => 'PLAN_RESTRICTED',
-                'message' => 'Upgrade required to run AI analysis.',
+                'message' => 'Upgrade required to run document analysis.',
             ], 403);
         }
         $document->status = 'PROCESSING';
@@ -571,7 +571,7 @@ class DocumentController extends Controller
             'MISSING' => ['label' => 'Missing', 'action' => 'Uploaden'],
             'PROCESSING' => ['label' => 'Processing', 'action' => 'Bekijk'],
             'VALID' => ['label' => 'Valid', 'action' => 'Bekijk'],
-            'INVALID' => ['label' => 'Invalid', 'action' => 'Fix met AI'],
+            'INVALID' => ['label' => 'Invalid', 'action' => 'Aanpassen'],
             'EXPIRED' => ['label' => 'Expired', 'action' => 'Vernieuw'],
             'EXPIRING_SOON' => ['label' => 'Expiring Soon', 'action' => 'Vernieuw'],
             'MANUAL_REVIEW' => ['label' => 'Manual Review', 'action' => 'Bekijk'],
@@ -593,6 +593,8 @@ class DocumentController extends Controller
             'ui_label' => $ui['label'],
             'recommended_action' => $ui['action'],
             'color' => $color,
+            'category_display' => Document::displayType($document->category_selected),
+            'detected_type_display' => Document::displayType($document->detected_type),
         ]);
     }
 

@@ -26,7 +26,7 @@ class EmailSettingsService
             'email_smtp_encryption' => (string) AppSetting::getValue('email_smtp_encryption', 'tls'),
             'email_smtp_username' => (string) AppSetting::getValue('email_smtp_username', ''),
             'email_smtp_password' => $smtpPassword,
-            'email_from_name' => (string) AppSetting::getValue('email_from_name', config('app.name', 'Wapcore LCE')),
+            'email_from_name' => (string) AppSetting::getValue('email_from_name', config('app.name', 'SuriCore LCE')),
             'email_from_address' => (string) AppSetting::getValue('email_from_address', 'noreply@example.com'),
             'email_reply_to_name' => (string) AppSetting::getValue('email_reply_to_name', ''),
             'email_reply_to_address' => (string) AppSetting::getValue('email_reply_to_address', ''),
@@ -96,7 +96,7 @@ class EmailSettingsService
     private function injectVariables(string $content, array $variables): string
     {
         $merged = array_merge([
-            'app_name' => (string) config('app.name', 'Wapcore LCE'),
+            'app_name' => (string) config('app.name', 'SuriCore LCE'),
             'timestamp' => now()->toDateTimeString(),
         ], $variables);
 

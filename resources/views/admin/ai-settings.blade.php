@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'AI-instellingen')
+@section('title', 'Documentanalyse-instellingen')
 @php($active = 'ai-settings')
 
 @section('content')
@@ -8,8 +8,8 @@
 
 <div class="page-header">
     <div>
-        <h2>AI-instellingen</h2>
-        <p>Beheer alle AI‑instellingen en modellen voor documentanalyse.</p>
+        <h2>Documentanalyse-instellingen</h2>
+        <p>Beheer alle instellingen en modellen voor documentanalyse.</p>
     </div>
     <div class="actions">
         <button class="btn secondary" onclick="window.location.href='/admin/system'">Terug naar systeemstatus</button>
@@ -18,7 +18,7 @@
 
 <div class="card" style="margin-bottom:16px;">
     <h3 style="margin-top:0;">Gemini-status</h3>
-    <p class="status">Controleer of de AI‑verbinding werkt.</p>
+    <p class="status">Controleer of de analyseverbinding werkt.</p>
     <div id="gemini" class="status">Laden...</div>
     <div class="actions" style="margin-top:12px;">
         <button class="btn secondary" id="btn-gemini">Test Gemini</button>
@@ -55,7 +55,7 @@
         <div class="form-field">
             <label for="ai-max-tokens">Maximaal aantal tokens</label>
             <input class="input" id="ai-max-tokens" type="number" min="1" max="8192" placeholder="2048">
-            <p class="status">Limiteert de lengte van de AI‑response.</p>
+            <p class="status">Limiteert de lengte van het modelantwoord.</p>
         </div>
         <div class="form-field">
             <label for="ai-debug">Gemini debug volledig</label>
@@ -64,7 +64,7 @@
                 <option value="1">Enabled</option>
                 <option value="0">Disabled</option>
             </select>
-            <p class="status">Sla volledige AI‑responses op voor debugging.</p>
+            <p class="status">Sla volledige modelantwoorden op voor debugging.</p>
         </div>
         <div class="form-field">
             <label for="ai-require-gemini">Gemini verplicht</label>
@@ -100,7 +100,7 @@
         </div>
     </div>
     <div class="actions" style="margin-top:12px;">
-        <button class="btn" id="btn-ai-save">AI-instellingen opslaan</button>
+        <button class="btn" id="btn-ai-save">Instellingen opslaan</button>
     </div>
     <div class="status" id="ai-status"></div>
 </div>
@@ -139,7 +139,7 @@
         const res = await AdminApp.api('/api/admin/ai-settings');
         const data = await res.json();
         if (!res.ok) {
-            AdminApp.setStatus(statusEl, data.message || 'Failed to load AI settings.', 'error');
+            AdminApp.setStatus(statusEl, data.message || 'Failed to load document analysis settings.', 'error');
             return;
         }
         const s = data.settings || {};
@@ -179,10 +179,10 @@
         });
         const data = await res.json();
         if (!res.ok) {
-            AdminApp.setStatus(statusEl, data.message || 'Failed to save AI settings.', 'error');
+            AdminApp.setStatus(statusEl, data.message || 'Failed to save document analysis settings.', 'error');
             return;
         }
-        AdminApp.setStatus(statusEl, 'AI settings saved.', 'success');
+        AdminApp.setStatus(statusEl, 'Document analysis settings saved.', 'success');
     }
 
     document.getElementById('btn-ai-save').addEventListener('click', saveAiSettings);

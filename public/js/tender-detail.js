@@ -27,31 +27,78 @@ async function fetchTender(id) {
 }
 
 function renderTender(tender) {
-  const gated = isGated(tender);
+  const sourceUrl = safeExternalUrl(tender.details_url || tender.source_url);
+
+  const hero = document.querySelector('.hero--detail');
+  if (hero) {
+    hero.style.cssText = coverStyle(tender.cover_image_url);
+  }
+
   setText('detailTitle', tender.title || 'Aanbesteding');
-  setText('detailMeta', `${formatDate(tender.date)} · ${tender.project || 'Tender'}`);
-  setText('detailClient', tender.client || 'Onbekende opdrachtgever');
+  setText('detailMeta', [
+    tender.client || 'Onbekende opdrachtgever',
+    tender.location || 'Suriname',
+    tender.submission_deadline ? `Deadline ${formatDate(tender.submission_deadline)}` : 'Deadline volgt',
+  ].join(' • '));
   setText('detailBody', tender.description || 'Geen details beschikbaar.');
+  setText('detailEligibility', tender.eligibility || 'Geschiktheidseisen volgen via de officiële bron of bij publicatie van de aanbestedingsstukken.');
+
+  const facts = document.getElementById('detailFacts');
+  if (facts) {
+    facts.innerHTML = [
+      factItem('Sector', tender.sector || 'Algemeen'),
+      factItem('Contracttype', tender.contract_type || 'Tender'),
+      factItem('Referentie', tender.reference_code || 'Nog niet opgegeven'),
+      factItem('Budget', tender.budget_label || 'Op aanvraag'),
+      factItem('Bron', tender.source_name || tender.client || 'Bron volgt'),
+      factItem('Publicatiedatum', formatDate(tender.date)),
+    ].join('');
+  }
+
+  const attachments = document.getElementById('detailAttachments');
+  if (attachments) {
+    const items = [];
+    if (sourceUrl) {
+      items.push(`
+        <a class="detail__attachment" href="${sourceUrl}" target="_blank" rel="noopener">
+          <span>Open officiële bron</span>
+          <span>↗</span>
+        </a>
+      `);
+    }
+    if (Array.isArray(tender.attachment_urls)) {
+      tender.attachment_urls.forEach((url, index) => {
+        const safeUrl = safeExternalUrl(url);
+        if (!safeUrl) return;
+        items.push(`
+          <a class="detail__attachment" href="${safeUrl}" target="_blank" rel="noopener">
+            <span>Bijlage ${index + 1}</span>
+            <span>↗</span>
+          </a>
+        `);
+      });
+    }
+    attachments.innerHTML = items.length
+      ? items.join('')
+      : '<div class="detail__attachment"><span>Geen externe bijlagen gekoppeld.</span><span></span></div>';
+  }
 
   const link = document.getElementById('detailLink');
-  const upgrade = document.getElementById('detailUpgrade');
-
-  if (gated) {
-    link?.classList.add('hidden');
-    upgrade?.classList.remove('hidden');
-  } else {
+  if (sourceUrl) {
     link?.classList.remove('hidden');
-    upgrade?.classList.add('hidden');
-    if (link) link.href = safeExternalUrl(tender.details_url) || '#';
+    if (link) link.href = sourceUrl;
+  } else {
+    link?.classList.add('hidden');
   }
 }
 
-function isGated(tender) {
-  if (typeof tender?.is_blurred === 'boolean') {
-    return tender.is_blurred;
-  }
-  const bullet = typeof tender.description === 'string' && /•/.test(tender.description);
-  return !tender.details_url && !tender.attachments && bullet;
+function factItem(label, value) {
+  return `
+    <div class="detail__item">
+      <p>${escapeHtml(label)}</p>
+      <p>${escapeHtml(value)}</p>
+    </div>
+  `;
 }
 
 function formatDate(value) {
@@ -61,9 +108,27 @@ function formatDate(value) {
   return date.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+function coverStyle(value) {
+  const url = safeExternalUrl(value);
+  if (url) {
+    return `background-image: linear-gradient(180deg, rgba(10,79,74,0.40), rgba(20,40,31,0.88)), url('${url}'); background-size: cover; background-position: center;`;
+  }
+  return '';
+}
+
 function setText(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
+}
+
+function escapeHtml(value) {
+  const str = String(value ?? '');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function safeExternalUrl(value) {

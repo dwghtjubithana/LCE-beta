@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Wapcore LCE | SuriCore</title>
+    <title>SuriCore LCE | SuriCore</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -469,7 +469,7 @@
         <header class="topbar">
             <div class="brand">
                 <div class="brand-mark">
-                    <img class="brand-logo" src="/public/img/logo-lce.png" alt="Wapcore LCE logo">
+                    <img class="brand-logo" src="/public/img/logo-lce.png" alt="SuriCore LCE logo">
                 </div>
             </div>
             <div class="actions">
@@ -530,7 +530,7 @@
                         <path d="m9.5 12 1.7 1.7 3.3-3.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     <h3>Legal & Local</h3>
-                    <p>Lokaal en juridisch: volledig afgestemd op de Surinaamse wetgeving en ondersteund door KKF en VSB.</p>
+                    <p>Lokaal en juridisch: volledig afgestemd op de Surinaamse wetgeving.</p>
                 </article>
             </div>
         </section>
@@ -590,7 +590,7 @@
         <div class="modal-card">
             <div class="modal-head">
                 <div>
-                    <img class="modal-brand" src="/public/img/logo-lce.png" alt="Wapcore LCE logo">
+                    <img class="modal-brand" src="/public/img/logo-lce.png" alt="SuriCore LCE logo">
                     <h3>Inloggen</h3>
                     <p>Toegang tot uw Local Content Engine dashboard.</p>
                 </div>
@@ -635,7 +635,7 @@
         <div class="modal-card">
             <div class="modal-head">
                 <div>
-                    <img class="modal-brand" src="/public/img/logo-lce.png" alt="Wapcore LCE logo">
+                    <img class="modal-brand" src="/public/img/logo-lce.png" alt="SuriCore LCE logo">
                     <h3>Registreren</h3>
                     <p>Maak uw account en start direct met uw quick scan.</p>
                 </div>

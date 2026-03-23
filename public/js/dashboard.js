@@ -13,7 +13,7 @@ const SCORE_DOC_META = {
     expected: 'Recente inschrijving, correcte bedrijfsnaam, registratienummer en datum.',
   },
   CRIB: {
-    title: 'CRIB Verklaring (Belastingdienst)',
+    title: 'Belastingdienst Verklaring',
     meaning: 'Toont fiscale status en betalingsgedrag.',
     expected: 'Geldige verklaring met bedrijfsgegevens en recente afgiftedatum.',
   },
@@ -47,6 +47,10 @@ const SCORE_DOC_META = {
     meaning: 'Toont dat het bedrijf operationeel vergund is voor activiteiten.',
     expected: 'Geldige vergunning met juiste bedrijfsnaam, activiteit/scope en geldigheidsperiode.',
   },
+};
+
+const DOC_TYPE_LABELS = {
+  CRIB: 'Belastingdienst Verklaring',
 };
 
 function getInputValue(id) {
@@ -333,6 +337,8 @@ companyProfileForm.addEventListener('submit', async (e) => {
     if (!res.ok) throw new Error(data.message || 'Opslaan mislukt');
 
     currentCompany = data.company || currentCompany;
+    populateCompanyForm(currentCompany);
+    populateDigitalIdForm(currentCompany);
     statusEl.textContent = 'Opgeslagen.';
     showToast('Bedrijfsprofiel bijgewerkt', 'success');
   } catch (err) {
@@ -479,11 +485,7 @@ async function fetchDashboard() {
     });
 
     if (!res.ok) {
-      const msgEl = document.getElementById('scoreMessage');
-      if (msgEl) {
-        msgEl.textContent = `Server Fout: ${res.status}`;
-        msgEl.classList.add('text-red-500');
-      }
+      setDashboardLoadError(`Server fout: ${res.status}`);
       return;
     }
 
@@ -546,9 +548,29 @@ async function fetchDashboard() {
     }
   } catch (err) {
     console.error('Dashboard fetch error', err);
-    if (hasScoreUi) {
-      document.getElementById('scoreMessage').textContent = 'Kan dashboard niet laden.';
-    }
+    setDashboardLoadError('Kan dashboard niet laden.');
+  }
+}
+
+function setDashboardLoadError(message) {
+  const msgEl = document.getElementById('scoreMessage');
+  if (msgEl) {
+    msgEl.textContent = message;
+    msgEl.classList.add('text-red-500');
+  }
+
+  const checklistIntro = document.getElementById('checklistIntro');
+  if (checklistIntro) {
+    checklistIntro.textContent = 'De checklist kon niet worden geladen.';
+  }
+
+  const checklist = document.getElementById('scoreChecklist');
+  if (checklist) {
+    checklist.innerHTML = `
+      <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 md:col-span-2">
+        De checklist kon niet worden geladen. Vernieuw de pagina of probeer het later opnieuw.
+      </div>
+    `;
   }
 }
 
@@ -580,7 +602,7 @@ function updateGauge(score, verificationStatus = null) {
   }
 
   circle.classList.add(colorClass);
-  label.className = `text-xs font-bold px-2 py-1 rounded mt-2 ${bgClass}`;
+  label.className = `absolute left-1/2 bottom-0 -translate-x-1/2 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap ${bgClass}`;
   label.textContent = labelText;
 
   // Dash Calculation
@@ -592,21 +614,21 @@ function updateGauge(score, verificationStatus = null) {
 
 function renderScoreOverview(score, requiredDocs, verificationStatus) {
   const intro = document.getElementById('scoreOverviewIntro');
-  const gateBadge = document.getElementById('scoreGateBadge');
+  const accountBadge = document.getElementById('scoreAccountBadge');
   const docReady = document.getElementById('scoreDocReady');
   const remaining = document.getElementById('scoreRemaining');
   const progressBar = document.getElementById('scoreProgressBar');
   const progressLabel = document.getElementById('scoreProgressLabel');
   const checklistIntro = document.getElementById('checklistIntro');
   const checklist = document.getElementById('scoreChecklist');
-  if (!intro || !gateBadge || !docReady || !remaining || !progressBar || !progressLabel || !checklistIntro || !checklist) return;
+  if (!intro || !accountBadge || !docReady || !remaining || !progressBar || !progressLabel || !checklistIntro || !checklist) return;
 
   const docs = Array.isArray(requiredDocs) ? requiredDocs : [];
   const scoreValue = Math.max(0, Math.min(100, Number(score) || 0));
   const total = docs.length;
   const validCount = docs.filter((doc) => normalizeDocStatus(doc?.status) === 'VALID').length;
   const missingOrInvalid = docs.filter((doc) => normalizeDocStatus(doc?.status) !== 'VALID');
-  const gateStage = getVerificationStage(verificationStatus || currentCompany?.verification_status);
+  const accountType = getAccountTypeLabel();
 
   intro.textContent = `Je score is ${scoreValue}%: ${validCount} van ${total} verplichte documenten zijn geldig.`;
   docReady.textContent = `${validCount} / ${total} documenten gereed`;
@@ -614,19 +636,20 @@ function renderScoreOverview(score, requiredDocs, verificationStatus) {
   progressBar.style.width = `${scoreValue}%`;
   progressLabel.textContent = `${scoreValue}% van 100%`;
 
-  const gateText = gateStage === 1 ? 'UNVERIFIED' : gateStage === 2 ? 'VERIFIED ENTITY' : 'OFFSHORE READY';
-  const gateClass = gateStage === 1
-    ? 'bg-red-100 text-red-700'
-    : gateStage === 2
-      ? 'bg-orange-100 text-orange-700'
-      : 'bg-emerald-100 text-emerald-700';
-  gateBadge.className = `text-xs font-semibold px-2 py-1 rounded-full ${gateClass}`;
-  gateBadge.textContent = `Gate: ${gateText}`;
+  accountBadge.className = `text-xs font-semibold px-2 py-1 rounded-full ${accountType.className}`;
+  accountBadge.textContent = `Account: ${accountType.label}`;
 
-  if (missingOrInvalid.length === 0) {
+  if (total === 0) {
+    checklistIntro.textContent = 'Nog geen documenten beschikbaar.';
+  } else if (missingOrInvalid.length === 0) {
     checklistIntro.textContent = 'Alles staat op geldig. Je zit op 100%.';
   } else {
     checklistIntro.textContent = `${missingOrInvalid.length} document(en) vragen nog actie om 100% te halen.`;
+  }
+
+  if (docs.length === 0) {
+    checklist.innerHTML = '<div class="rounded-xl border border-slate-200 p-4 text-sm text-slate-500">Nog geen documenten beschikbaar.</div>';
+    return;
   }
 
   checklist.innerHTML = docs.map((doc) => {
@@ -667,6 +690,26 @@ function renderScoreOverview(score, requiredDocs, verificationStatus) {
   }).join('');
 }
 
+function getAccountTypeLabel() {
+  const plan = String(currentUser?.plan || '').trim().toUpperCase();
+  if (plan === 'ENTERPRISE') {
+    return { label: 'Enterprise', className: 'bg-emerald-100 text-emerald-700' };
+  }
+  if (plan === 'BUSINESS' || plan === 'PRO') {
+    return { label: plan === 'PRO' ? 'Pro' : 'Business', className: 'bg-blue-100 text-blue-700' };
+  }
+  if (plan) {
+    return { label: plan, className: 'bg-slate-200 text-slate-700' };
+  }
+
+  const companyType = String(currentCompany?.company_type_key || '').trim();
+  if (companyType) {
+    return { label: companyType.replace(/[_-]+/g, ' '), className: 'bg-slate-200 text-slate-700' };
+  }
+
+  return { label: 'Free', className: 'bg-slate-200 text-slate-700' };
+}
+
 function normalizeDocStatus(status) {
   const value = String(status || 'MISSING').toUpperCase();
   if (value === 'PASS') return 'VALID';
@@ -693,8 +736,15 @@ function normalizeDocType(type) {
     .replace(/[\s-]+/g, '_');
 }
 
+function getDocTypeLabel(type) {
+  const raw = String(type || '').trim();
+  if (!raw) return 'Document';
+  const normalized = normalizeDocType(raw);
+  return DOC_TYPE_LABELS[normalized] || raw;
+}
+
 function nextActionForStatus(status, typeKey) {
-  if (status === 'MISSING') return `Upload dit document (${typeKey.replace(/_/g, ' ')}).`;
+  if (status === 'MISSING') return `Upload dit document (${getDocTypeLabel(typeKey)}).`;
   if (status === 'PROCESSING') return 'Wacht op automatische verwerking en controleer straks opnieuw.';
   if (status === 'MANUAL_REVIEW' || status === 'NEEDS_CONFIRMATION' || status === 'EXPIRING' || status === 'EXPIRING_SOON') {
     return 'Open het document en volg de aanbevolen actie of upload een betere versie.';
@@ -760,7 +810,7 @@ async function fetchDocuments() {
       const aiFeedback = escapeHtml(doc.ai_feedback || 'Geen scanadvies beschikbaar.');
       const summary = doc.extracted_data?.ai_summary;
       const summaryHtml = renderSummary(summary, aiFeedback);
-      const detectedType = escapeHtml(doc.detected_type || doc.category_selected || 'Onbekend');
+      const detectedType = escapeHtml(doc.detected_type_display || doc.category_display || doc.detected_type || doc.category_selected || 'Onbekend');
       const expiry = escapeHtml(formatDateTime(doc.expiry_date || '-'));
       const ocr = doc.ocr_confidence !== null && doc.ocr_confidence !== undefined ? `${doc.ocr_confidence}%` : '-';
       const ai = doc.ai_confidence !== null && doc.ai_confidence !== undefined ? `${doc.ai_confidence}%` : '-';
@@ -1292,6 +1342,7 @@ if (companyCreateForm) {
       currentCompany = data.company;
       hideCreateCompanyForm();
       populateCompanyForm(currentCompany);
+      populateDigitalIdForm(currentCompany);
       showToast('Bedrijf aangemaakt', 'success');
       fetchDashboard();
       fetchDocuments();
@@ -1987,182 +2038,137 @@ function safeExternalUrl(value) {
 
 function initUserTendersPage() {
   const listEl = document.getElementById('tendersList');
-  const myListEl = document.getElementById('myTendersList');
-  if (!listEl || !myListEl) return;
+  if (!listEl) return;
 
   const refreshBtn = document.getElementById('refreshTendersBtn');
-  const refreshMyBtn = document.getElementById('refreshMyTendersBtn');
-  const form = document.getElementById('tenderForm');
-  const statusEl = document.getElementById('tenderFormStatus');
-  const submitBtn = document.getElementById('tenderSubmitBtn');
-
   refreshBtn?.addEventListener('click', loadApprovedTenders);
-  refreshMyBtn?.addEventListener('click', loadMyTenders);
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!submitBtn) return;
-    submitBtn.disabled = true;
-    if (statusEl) statusEl.textContent = 'Bezig met insturen...';
-
-    const title = document.getElementById('tenderTitle')?.value?.trim();
-    const client = document.getElementById('tenderClient')?.value?.trim();
-    const date = document.getElementById('tenderDate')?.value || null;
-    const isDirectWork = document.getElementById('tenderDirectWork')?.value === '1';
-    const detailsUrl = document.getElementById('tenderUrl')?.value?.trim();
-    const description = document.getElementById('tenderDescription')?.value?.trim();
-    const attachmentsRaw = document.getElementById('tenderAttachments')?.value || '';
-    const attachments = attachmentsRaw
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    if (!title) {
-      showToast('Titel is verplicht.', 'error');
-      if (statusEl) statusEl.textContent = 'Titel is verplicht.';
-      submitBtn.disabled = false;
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append('title', title);
-      if (client) formData.append('client', client);
-      if (date) formData.append('date', date);
-      if (detailsUrl) formData.append('details_url', detailsUrl);
-      if (description) formData.append('description', description);
-      formData.append('is_direct_work', isDirectWork ? '1' : '0');
-      if (attachments.length) {
-        formData.append('attachments_urls', attachments.join('\n'));
-      }
-      const attachmentFiles = document.getElementById('tenderAttachmentFiles')?.files || [];
-      Array.from(attachmentFiles).forEach((file) => {
-        formData.append('attachments_files[]', file);
-      });
-
-      const res = await apiFetch('/tenders', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        const msg = formatApiError(data, 'Insturen mislukt. Probeer opnieuw.');
-        showToast(msg, 'error');
-        if (statusEl) statusEl.textContent = msg;
-        submitBtn.disabled = false;
-        return;
-      }
-
-      showToast('Aanbesteding ingestuurd. Wacht op goedkeuring.', 'success');
-      if (statusEl) statusEl.textContent = 'Inzending ontvangen. Status: in afwachting.';
-      form.reset();
-      await loadMyTenders();
-    } catch (err) {
-      const msg = err?.message || 'Insturen mislukt. Probeer opnieuw.';
-      showToast(msg, 'error');
-      if (statusEl) statusEl.textContent = msg;
-    } finally {
-      submitBtn.disabled = false;
-    }
-  });
 
   loadApprovedTenders();
-  loadMyTenders();
 
   async function loadApprovedTenders() {
-    listEl.innerHTML = '<p class="text-sm text-slate-500">Aanbestedingen laden...</p>';
+    listEl.innerHTML = '<div class="rounded-2xl border border-slate-200 p-5 text-sm text-slate-500 sm:col-span-2">Aanbestedingen laden...</div>';
     try {
       const res = await apiFetch('/tenders');
       const data = await res.json();
       if (!res.ok) {
-        listEl.innerHTML = `<p class="text-sm text-red-500">${escapeHtml(data.message || 'Aanbestedingen ophalen mislukt.')}</p>`;
+        listEl.innerHTML = `<div class="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-600 sm:col-span-2">${escapeHtml(data.message || 'Aanbestedingen ophalen mislukt.')}</div>`;
         return;
       }
-      renderTenderList(listEl, data.tenders || []);
+      const items = Array.isArray(data.tenders) ? data.tenders : [];
+      renderTenderList(listEl, items);
+      renderTenderSidebar(items);
     } catch (err) {
-      listEl.innerHTML = `<p class="text-sm text-red-500">${escapeHtml(err?.message || 'Aanbestedingen ophalen mislukt.')}</p>`;
-    }
-  }
-
-  async function loadMyTenders() {
-    myListEl.innerHTML = '<p class="text-sm text-slate-500">Inzendingen laden...</p>';
-    try {
-      const res = await apiFetch('/tenders/mine');
-      const data = await res.json();
-      if (!res.ok) {
-        myListEl.innerHTML = `<p class="text-sm text-red-500">${escapeHtml(data.message || 'Inzendingen ophalen mislukt.')}</p>`;
-        return;
-      }
-      renderMyTenderList(myListEl, data.tenders || []);
-    } catch (err) {
-      myListEl.innerHTML = `<p class="text-sm text-red-500">${escapeHtml(err?.message || 'Inzendingen ophalen mislukt.')}</p>`;
+      listEl.innerHTML = `<div class="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-600 sm:col-span-2">${escapeHtml(err?.message || 'Aanbestedingen ophalen mislukt.')}</div>`;
     }
   }
 
   function renderTenderList(target, items) {
     if (!items.length) {
-      target.innerHTML = '<p class="text-sm text-slate-500">Geen aanbestedingen gevonden.</p>';
+      target.innerHTML = '<div class="rounded-2xl border border-slate-200 p-5 text-sm text-slate-500 sm:col-span-2">Geen aanbestedingen gevonden.</div>';
       return;
     }
+
     const html = items.map((tender) => {
-      const tag = tender.is_direct_work ? '<span class="px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700">Direct werk</span>' : '';
-      const date = escapeHtml(tender.date ? new Date(tender.date).toLocaleDateString('nl-NL') : 'Onbekend');
-      const safeUrl = safeExternalUrl(tender.details_url);
-      const url = safeUrl ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 text-sm">Details bekijken</a>` : '<span class="text-slate-400 text-sm">Details afgeschermd</span>';
       const title = escapeHtml(tender.title || tender.project || 'Aanbesteding');
       const client = escapeHtml(tender.client || 'Onbekend');
       const description = escapeHtml(tender.description || 'Geen omschrijving beschikbaar.');
-      const attachmentCount = Array.isArray(tender.attachments) ? tender.attachments.length : 0;
+      const sector = escapeHtml(tender.sector || 'Algemeen');
+      const location = escapeHtml(tender.location || 'Suriname');
+      const deadline = escapeHtml(tender.submission_deadline ? new Date(tender.submission_deadline).toLocaleDateString('nl-NL') : 'Nog niet opgegeven');
+      const contractType = escapeHtml(tender.contract_type || 'Tender');
+      const referenceCode = escapeHtml(tender.reference_code || 'Nog niet opgegeven');
+      const budget = escapeHtml(tender.budget_label || 'Op aanvraag');
+      const safeUrl = safeExternalUrl(tender.details_url || tender.source_url);
+      const coverStyle = safeExternalUrl(tender.cover_image_url)
+        ? `style="background-image:linear-gradient(180deg,rgba(15,23,42,0.10),rgba(15,23,42,0.65)),url('${safeExternalUrl(tender.cover_image_url)}');background-size:cover;background-position:center;"`
+        : 'style="background:linear-gradient(135deg,#0f766e,#14281f);"';
+      const tag = tender.is_direct_work
+        ? '<span class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">Direct werk</span>'
+        : '<span class="inline-flex rounded-full bg-teal-100 px-2.5 py-1 text-[11px] font-semibold text-teal-700">Curated</span>';
+      const url = safeUrl
+        ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-teal-700">Bron openen</a>`
+        : '<span class="text-sm text-slate-400">Bron volgt</span>';
       return `
-        <div class="border border-slate-200 rounded-xl p-4 mb-3">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <h4 class="font-semibold text-slate-800">${title}</h4>
-              <p class="text-xs text-slate-500 mt-1">Opdrachtgever: ${client} • Datum: ${date}</p>
+        <article class="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+          <div class="flex min-h-[168px] items-start justify-between gap-3 p-5 text-white" ${coverStyle}>
+            <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-sm font-black text-slate-800">
+              ${escapeHtml(getTenderInitials(client))}
             </div>
             ${tag}
           </div>
-          <p class="text-sm text-slate-600 mt-2">${description}</p>
-          <p class="text-xs text-slate-500 mt-2">Bijlagen: ${attachmentCount}</p>
-          <div class="mt-3">${url}</div>
-        </div>
-      `;
-    }).join('');
-    target.innerHTML = html;
-  }
-
-  function renderMyTenderList(target, items) {
-    if (!items.length) {
-      target.innerHTML = '<p class="text-sm text-slate-500">Je hebt nog geen aanbestedingen ingestuurd.</p>';
-      return;
-    }
-    const statusMap = {
-      PENDING: { label: 'In afwachting', cls: 'bg-yellow-100 text-yellow-800' },
-      APPROVED: { label: 'Goedgekeurd', cls: 'bg-green-100 text-green-700' },
-      REJECTED: { label: 'Afgewezen', cls: 'bg-red-100 text-red-700' },
-    };
-
-    const html = items.map((tender) => {
-      const status = statusMap[tender.status] || { label: tender.status || 'Onbekend', cls: 'bg-slate-100 text-slate-600' };
-      const submitted = escapeHtml(tender.submitted_at ? new Date(tender.submitted_at).toLocaleString('nl-NL') : 'Onbekend');
-      const attachmentCount = Array.isArray(tender.attachments) ? tender.attachments.length : 0;
-      const title = escapeHtml(tender.title || tender.project || 'Aanbesteding');
-      const safeStatusLabel = escapeHtml(status.label);
-      const description = escapeHtml(tender.description || 'Geen omschrijving beschikbaar.');
-      return `
-        <div class="border border-slate-200 rounded-xl p-4 mb-3">
-          <div class="flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <h4 class="font-semibold text-slate-800">${title}</h4>
-              <p class="text-xs text-slate-500 mt-1">Ingestuurd op ${submitted}</p>
+          <div class="p-5">
+            <div class="flex flex-wrap gap-2">
+              <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">${sector}</span>
+              <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">${contractType}</span>
             </div>
-            <span class="px-2 py-0.5 text-xs rounded-full ${status.cls}">${safeStatusLabel}</span>
+            <h4 class="mt-4 text-lg font-black tracking-tight text-slate-900">${title}</h4>
+            <p class="mt-1 text-sm text-slate-500">${client}</p>
+            <p class="mt-3 text-sm leading-6 text-slate-600">${description}</p>
+            <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div class="rounded-2xl bg-slate-50 px-3 py-3">
+                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Deadline</dt>
+                <dd class="mt-1 font-semibold text-slate-700">${deadline}</dd>
+              </div>
+              <div class="rounded-2xl bg-slate-50 px-3 py-3">
+                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Locatie</dt>
+                <dd class="mt-1 font-semibold text-slate-700">${location}</dd>
+              </div>
+              <div class="rounded-2xl bg-slate-50 px-3 py-3">
+                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Budget</dt>
+                <dd class="mt-1 font-semibold text-slate-700">${budget}</dd>
+              </div>
+              <div class="rounded-2xl bg-slate-50 px-3 py-3">
+                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Referentie</dt>
+                <dd class="mt-1 font-semibold text-slate-700">${referenceCode}</dd>
+              </div>
+            </dl>
+            <div class="mt-4 flex items-center justify-between gap-3">
+              ${url}
+              <a href="/tenders/${tender.id}" class="text-sm font-semibold text-slate-500">Volledige pagina</a>
+            </div>
           </div>
-          <p class="text-sm text-slate-600 mt-2">${description}</p>
-          <p class="text-xs text-slate-500 mt-2">Bijlagen: ${attachmentCount}</p>
-        </div>
+        </article>
       `;
     }).join('');
     target.innerHTML = html;
   }
+
+  function renderTenderSidebar(items) {
+    const totalEl = document.getElementById('userTenderStatTotal');
+    const deadlineEl = document.getElementById('userTenderStatDeadline');
+    const sectorsEl = document.getElementById('userTenderStatSectors');
+    const issuerList = document.getElementById('tenderIssuerList');
+
+    const now = new Date();
+    const nextWeek = new Date();
+    nextWeek.setDate(now.getDate() + 7);
+    const deadlines = items.filter((item) => {
+      const deadline = new Date(item.submission_deadline || item.date || 0);
+      return !Number.isNaN(deadline.getTime()) && deadline >= now && deadline <= nextWeek;
+    }).length;
+    const sectors = new Set(items.map((item) => String(item.sector || '').trim()).filter(Boolean));
+    const issuers = Array.from(new Set(items.map((item) => item.client).filter(Boolean))).slice(0, 5);
+
+    if (totalEl) totalEl.textContent = items.length;
+    if (deadlineEl) deadlineEl.textContent = deadlines;
+    if (sectorsEl) sectorsEl.textContent = sectors.size || 1;
+    if (issuerList) {
+      issuerList.innerHTML = issuers.length
+        ? issuers.map((issuer) => `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <p class="text-sm font-semibold text-slate-800">${escapeHtml(issuer)}</p>
+            </div>
+          `).join('')
+        : '<div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">Nog geen opdrachtgevers beschikbaar.</div>';
+    }
+  }
+}
+
+function getTenderInitials(value) {
+  return String(value || '')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'SC';
 }

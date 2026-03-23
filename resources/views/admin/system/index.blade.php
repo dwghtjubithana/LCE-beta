@@ -8,8 +8,8 @@
 
 <div class="page-header">
     <div>
-        <h2>Systeemstatus & AI</h2>
-        <p>Bekijk status, metrics en beheer AI‑instellingen.</p>
+        <h2>Systeemstatus & Documentanalyse</h2>
+        <p>Bekijk status, metrics en beheer analyse-instellingen.</p>
     </div>
 </div>
 
@@ -26,7 +26,7 @@
     </div>
     <div class="card">
         <h3 style="margin-top:0;">Gemini-status</h3>
-        <p class="status">Controleer of de AI‑verbinding werkt.</p>
+        <p class="status">Controleer of de analyseverbinding werkt.</p>
         <div id="gemini" class="status">Laden...</div>
         <div class="actions" style="margin-top:12px;">
             <button class="btn secondary" id="btn-gemini">Test Gemini</button>

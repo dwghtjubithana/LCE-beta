@@ -59,7 +59,7 @@
         </div>
         <div class="form-field">
             <label for="email-from-name">From naam</label>
-            <input class="input" id="email-from-name" placeholder="Wapcore LCE">
+            <input class="input" id="email-from-name" placeholder="SuriCore LCE">
         </div>
         <div class="form-field">
             <label for="email-from-address">From email</label>

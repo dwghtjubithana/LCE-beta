@@ -116,7 +116,7 @@ class AdminEmailSettingsController extends Controller
             'name' => 'Test gebruiker',
         ]);
 
-        $subject = $payload['subject'] ?? ($rendered['subject'] ?? 'Test e-mail vanaf Wapcore LCE');
+        $subject = $payload['subject'] ?? ($rendered['subject'] ?? 'Test e-mail vanaf SuriCore LCE');
         $body = $payload['body'] ?? ($rendered['body'] ?? 'Dit is een testmail.');
 
         try {

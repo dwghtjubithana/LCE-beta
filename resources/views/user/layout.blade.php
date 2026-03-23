@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Wapcore LCE Dashboard')</title>
+    <title>@yield('title', 'SuriCore LCE Dashboard')</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
@@ -16,8 +16,8 @@
     <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm hidden modal-enter">
         <div class="bg-white w-full max-w-md p-8 rounded-2xl shadow-2xl relative">
             <div class="flex flex-col items-center mb-6">
-                <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-20 h-auto object-contain mb-4">
-                <h2 class="text-2xl font-bold text-slate-800">Wapcore Login</h2>
+                <img src="/public/img/logo-lce.png" alt="SuriCore LCE logo" class="w-20 h-auto object-contain mb-4">
+                <h2 class="text-2xl font-bold text-slate-800">SuriCore LCE Login</h2>
                 <p class="text-slate-500 text-sm mt-1">Log in om toegang te krijgen tot de Local Content Engine</p>
             </div>
             <form id="loginForm" class="space-y-4">
@@ -62,17 +62,20 @@
         <button id="mobileMenuBtn" class="p-2 rounded-lg border border-slate-200 text-slate-700">
             <i data-lucide="menu" class="w-5 h-5"></i>
         </button>
-        <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-28 h-auto object-contain">
+        <img src="/public/img/logo-lce.png" alt="SuriCore LCE logo" class="w-28 h-auto object-contain">
         <div class="w-9"></div>
     </header>
 
     <!-- MOBILE DRAWER -->
     <div id="mobileMenuOverlay" class="fixed inset-0 z-40 bg-slate-900/60 hidden md:hidden"></div>
-    <aside id="mobileMenu" class="fixed top-0 left-0 bottom-0 w-72 bg-slate-900 text-white z-50 transform -translate-x-full transition-transform md:hidden">
-        <div class="p-6">
-            <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-32 h-auto object-contain">
+    <aside id="mobileMenu" class="fixed top-0 left-0 bottom-0 w-72 max-w-[85vw] bg-slate-900 text-white z-50 transform -translate-x-full transition-transform md:hidden flex flex-col h-[100dvh] overflow-y-auto overscroll-contain">
+        <div class="p-6 flex items-center justify-between gap-3 border-b border-slate-800">
+            <img src="/public/img/logo-lce.png" alt="SuriCore LCE logo" class="w-32 h-auto object-contain">
+            <button type="button" id="mobileMenuCloseBtn" class="p-2 rounded-lg border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
         </div>
-        <nav class="flex-1 mt-2 px-4 space-y-1">
+        <nav class="flex-1 mt-2 px-4 pb-4 space-y-1">
             <a href="/dashboard" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'dashboard' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
                 <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
                 <span>Dashboard</span>
@@ -98,7 +101,7 @@
                 <span>Upgrade</span>
             </a>
         </nav>
-        <div class="p-4 border-t border-slate-800 bg-slate-950/30">
+        <div class="p-4 border-t border-slate-800 bg-slate-950/30 sticky bottom-0">
             <button onclick="handleLogout()" class="text-xs text-slate-400 hover:text-red-400 transition flex items-center gap-1 mt-0.5">
                 <i data-lucide="log-out" class="w-3 h-3"></i> Uitloggen
             </button>
@@ -108,7 +111,7 @@
     <!-- SIDEBAR -->
     <aside class="w-64 bg-slate-900 text-white flex-shrink-0 hidden md:flex flex-col h-screen">
         <div class="p-6">
-            <img src="/public/img/logo-lce.png" alt="Wapcore LCE logo" class="w-36 h-auto object-contain">
+            <img src="/public/img/logo-lce.png" alt="SuriCore LCE logo" class="w-36 h-auto object-contain">
         </div>
         <nav class="flex-1 mt-2 px-4 space-y-1">
             <a href="/dashboard" class="flex items-center gap-3 p-3 rounded-xl {{ ($active ?? '') === 'dashboard' ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
@@ -167,13 +170,13 @@
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8 scroll-smooth" id="dashboardContent">
+        <div class="flex-1 overflow-y-auto px-4 pt-6 pb-28 md:p-8 scroll-smooth" id="dashboardContent">
             @yield('content')
         </div>
     </main>
 
     <!-- TOAST MESSAGE -->
-    <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl transform translate-y-32 transition-transform duration-300 flex items-center gap-3 z-50">
+    <div id="toast" class="fixed bottom-4 right-4 left-4 md:left-auto md:bottom-6 md:right-6 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl transform translate-y-32 transition-transform duration-300 flex items-center gap-3 z-50">
         <i id="toastIcon" data-lucide="info"></i>
         <span class="font-medium" id="toastMsg">Bericht</span>
     </div>
@@ -230,6 +233,7 @@
         const mobileBtn = document.getElementById('mobileMenuBtn');
         const mobileMenu = document.getElementById('mobileMenu');
         const mobileOverlay = document.getElementById('mobileMenuOverlay');
+        const mobileCloseBtn = document.getElementById('mobileMenuCloseBtn');
         const toggleMobileMenu = (open) => {
             if (!mobileMenu || !mobileOverlay) return;
             if (open) {
@@ -241,6 +245,7 @@
             }
         };
         mobileBtn?.addEventListener('click', () => toggleMobileMenu(true));
+        mobileCloseBtn?.addEventListener('click', () => toggleMobileMenu(false));
         mobileOverlay?.addEventListener('click', () => toggleMobileMenu(false));
     </script>
     @yield('scripts')

@@ -26,6 +26,7 @@
         <select id="filter-category">
             <option value="">Alle categorieen</option>
             <option value="KKF Uittreksel">KKF Uittreksel</option>
+            <option value="CRIB">Belastingdienst Verklaring</option>
             <option value="Vergunning">Vergunning</option>
             <option value="Belastingverklaring">Belastingverklaring</option>
             <option value="ID Bewijs">ID Bewijs</option>
@@ -81,7 +82,7 @@
             <tr>
                 <td>${doc.id}</td>
                 <td>${doc.original_filename || '-'}</td>
-                <td>${doc.category_selected || '-'}</td>
+                <td>${doc.category_display || doc.category_selected || '-'}</td>
                 <td><span class="badge ${statusClass}">${statusLabel}</span></td>
                 <td>${doc.company_id || '-'}</td>
                 <td class="actions">

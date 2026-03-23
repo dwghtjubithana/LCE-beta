@@ -66,7 +66,7 @@ class AdminAiSettingsController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'AI settings updated.',
+            'message' => 'Document analysis settings updated.',
         ]);
     }
 }

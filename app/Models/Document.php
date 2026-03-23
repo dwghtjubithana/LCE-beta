@@ -9,6 +9,10 @@ class Document extends Model
 {
     use HasFactory;
 
+    public const TYPE_LABELS = [
+        'CRIB' => 'Belastingdienst Verklaring',
+    ];
+
     protected $fillable = [
         'uuid',
         'company_id',
@@ -58,5 +62,15 @@ class Document extends Model
     public function files()
     {
         return $this->hasMany(DocumentFile::class);
+    }
+
+    public static function displayType(?string $type): string
+    {
+        $value = trim((string) $type);
+        if ($value === '') {
+            return '';
+        }
+
+        return self::TYPE_LABELS[$value] ?? $value;
     }
 }

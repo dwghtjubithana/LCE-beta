@@ -15,7 +15,7 @@ class AdminGeminiController extends Controller
 
         if (!\App\Models\AppSetting::getValue('gemini_api_key')) {
             $status = 'error';
-            $message = 'Gemini API-sleutel ontbreekt in AI-instellingen.';
+            $message = 'Gemini API-sleutel ontbreekt in de analyse-instellingen.';
         } else {
             try {
                 $result = $gemini->ping();
